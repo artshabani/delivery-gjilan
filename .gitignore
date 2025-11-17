@@ -62,3 +62,8 @@ export/
 *.bak
 *.tmp
 *.temp
+
+supabase/functions/order-email/index.ts
+supabase/functions/order-email/
+supabase/
+

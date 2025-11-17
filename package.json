@@ -26,6 +26,7 @@
     "react-hot-toast": "^2.6.0"
   },
   "devDependencies": {
+    "@types/deno": "^2.5.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",

@@ -87,12 +87,8 @@ export default function AdminProductsPage() {
         </select>
       </div>
 
-      <ProductTable
-        categories={categories}
-        filterCategory={filterCategory}
-        refresh={refresh}
-        onRefresh={() => setRefresh((r) => r + 1)}
-      />
+      <ProductTable />
+
 
       {showAddModal && (
         <AddProductModal

@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 import SaleModal from "./SaleModal";
 import ColumnVisibilityMenu from "@/components/ui/ColumnVisibilityMenu";
 import DarkModeToggle from "@/components/ui/DarkModeToggle";
+import type { SortingState } from "@tanstack/react-table";
+
 
 import {
   useReactTable,
@@ -326,7 +328,7 @@ export default function ProductTable() {
   );
 
   // Table instance -----------------------------------------
-  const [sorting, setSorting] = useState([]);
+const [sorting, setSorting] = useState<SortingState>([]);
 
 const table = useReactTable({
   data: products,

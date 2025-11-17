@@ -1,0 +1,20 @@
+:root {
+  --brand-color: #4c46ff;
+  --bg: #ffffff;
+  --text: #111111;
+
+  --card-bg: #ffffff;
+  --card-border: #e5e5e5;
+
+  --radius: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;       /* your new navy background */
+    --text: #ffffff;
+
+    --card-bg: #1e293b;  /* navy card bg */
+    --card-border: #334155;
+  }
+}

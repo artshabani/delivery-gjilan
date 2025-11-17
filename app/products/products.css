@@ -1,0 +1,9 @@
+.category-title {
+  @apply text-xl font-bold mb-2;
+}
+
+.product-card {
+  @apply rounded-xl border bg-white shadow-sm p-3;
+}
+
+

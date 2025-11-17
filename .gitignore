@@ -1,0 +1,64 @@
+# ============================================
+# 🔥 NEXT.JS / NODE.JS / SUPABASE GITIGNORE
+# ============================================
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+# Next.js build output
+.next/
+out/
+dist/
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+supabase/functions/.next/
+supabase/functions/node_modules/
+
+# Environment files (VERY IMPORTANT)
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Typescript
+*.tsbuildinfo
+
+# OS Junk
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor folders
+.vscode/
+.idea/
+*.swp
+
+# Local cache
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Static export cache
+export/
+
+# Misc
+*.local
+*.bak
+*.tmp
+*.temp

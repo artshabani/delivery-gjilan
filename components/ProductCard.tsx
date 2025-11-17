@@ -12,8 +12,7 @@ export default function ProductCard({
   name,
   price,
   image_url,
-  is_on_sale,
-  sale_price
+
 }: Props) {
   const { addItem, decreaseItem, items } = useCart();
   const quantity = items.find((i) => i.product.id === id)?.quantity || 0;
@@ -32,7 +31,7 @@ export default function ProductCard({
   };
 
   const inc = () => {
-    addItem({ id, name, price, image_url, is_on_sale, sale_price });
+    addItem({ id, name, price, image_url});
     showInstant();
     startHideTimer();
   };

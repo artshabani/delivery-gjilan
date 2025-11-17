@@ -1,6 +1,8 @@
 "use client";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -36,5 +38,9 @@ export default function AuthPage() {
     login();
   }, [token, router]);
 
-  return <p className="p-4 text-center text-white">Logging in...</p>;
+  return (
+    <p className="p-4 text-center text-white">
+      Logging in...
+    </p>
+  );
 }

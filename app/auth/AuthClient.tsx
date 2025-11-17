@@ -27,7 +27,7 @@ export default function AuthClient() {
 
       localStorage.setItem("dg_user_id", data.userId);
 
-      router.push("/products");
+      router.push("/");
     };
 
     login();

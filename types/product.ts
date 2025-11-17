@@ -4,7 +4,10 @@ export interface Product {
   price: number;
   image_url: string | null;
 
-  // NEW OPTIONALS:
+  // ADD THIS LINE ⬇️
+  category_id?: number;
+
+  // OPTIONAL FIELDS
   restaurant_id?: number;
   notes?: string;
   modifiers?: Record<string, boolean>;

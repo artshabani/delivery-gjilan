@@ -296,7 +296,9 @@ export default function ProductsPage() {
               key={sub.id}
               data-subcat={sub.id}
               data-parent={sub.parent_id ?? 0}
-              ref={(el) => (sectionRefs.current[sub.id] = el)}
+              ref={(el) => {
+                sectionRefs.current[sub.id] = el;
+              }}
               className="mb-10"
             >
               <h2 className="text-xl font-semibold mb-3">{sub.name}</h2>

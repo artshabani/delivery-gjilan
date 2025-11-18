@@ -1,3 +1,5 @@
+// File: src/context/CartContext.tsx
+
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
@@ -13,8 +15,10 @@ interface CartContextType {
   totalQuantity: number;
   totalPrice: number;
   addItem: (product: Product, qty?: number, notes?: string) => void;
-  decreaseItem: (productId: number, notes?: string) => void;
-  removeItem: (productId: number) => void;
+  // This expects string
+  decreaseItem: (productId: string) => void; 
+  // This expects string
+  removeItem: (productId: string) => void; 
   clearCart: () => void;
 }
 
@@ -58,25 +62,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const decreaseItem = (productId: number) => {
+  // FIX 3A: Convert i.product.id (number) to string for every comparison
+  const decreaseItem = (productId: string) => {
     setItems((prev) => {
-      const target = prev.find((i) => i.product.id === productId);
+      // Find: Convert ID to string for comparison
+      const target = prev.find((i) => String(i.product.id) === productId);
       if (!target) return prev;
 
       if (target.quantity <= 1) {
-        return prev.filter((i) => i.product.id !== productId);
+        // Filter: Convert ID to string for comparison
+        return prev.filter((i) => String(i.product.id) !== productId);
       }
 
       return prev.map((i) =>
-        i.product.id === productId
+        // Map: Convert ID to string for comparison
+        String(i.product.id) === productId
           ? { ...i, quantity: i.quantity - 1 }
           : i
       );
     });
   };
 
-  const removeItem = (productId: number) => {
-    setItems((prev) => prev.filter((i) => i.product.id !== productId));
+  const removeItem = (productId: string) => { 
+    // FIX 3B: Convert ID to string for comparison
+    setItems((prev) => prev.filter((i) => String(i.product.id) !== productId));
   };
 
   const clearCart = () => setItems([]);

@@ -51,16 +51,26 @@ export default function CartOverlay() {
 
       const orderId = order.id;
 
-      const itemsPayload = cartItems.map(({ product, quantity }) => ({
+      // *** FIX 4: Corrected Foreign Key Insertion Logic ***
+      const itemsPayload = cartItems.map(({ product, quantity }) => {
+const type = product.type;
+          return {
         order_id: orderId,
-        product_id: product.type === "grocery" ? product.id : null,
-        restaurant_item_id: product.type === "restaurant" ? product.id : null,
+        
+        // Only assign product_id if the type is EXPLICITLY 'grocery'
+        product_id: type === "grocery" ? product.id : null,
+        
+        // Only assign restaurant_item_id if the type is EXPLICITLY 'restaurant'
+        // (Assuming your restaurant items have type="restaurant")
+        restaurant_item_id: type === "restaurant" ? product.id : null, 
+        
         quantity,
         price: product.price,
         notes: product.notes ?? null,
         modifiers: product.modifiers ?? null,
-        item_type: product.type ?? "grocery",
-      }));
+        item_type: type, // Store the actual type (or null)
+    };
+      });
 
       const { error: itemsErr } = await supabase
         .from("order_items")
@@ -69,6 +79,7 @@ export default function CartOverlay() {
       if (itemsErr) {
         toast.dismiss();
         toast.error("Failed to insert items");
+        console.error("ITEMS INSERTION ERROR:", itemsErr); // Added console log for better debugging
         return;
       }
 
@@ -147,7 +158,7 @@ export default function CartOverlay() {
 
           <div className="flex gap-2 items-center">
             <button
-              onClick={() => decreaseItem(product.id)}
+              onClick={() => decreaseItem(String(product.id))} // 👈 Apply String() here
               className="w-7 h-7 bg-slate-700 rounded-full text-white text-sm flex items-center justify-center"
             >
               -

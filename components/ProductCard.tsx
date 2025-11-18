@@ -37,7 +37,9 @@ export default function ProductCard({
   };
 
   const dec = () => {
-    decreaseItem(id);
+    // *** FIX: Ensure the ID is a string when calling decreaseItem ***
+    // This resolves the TypeScript error shown in image_fb4720.png 
+    decreaseItem(String(id)); 
     showInstant();
     startHideTimer();
   };

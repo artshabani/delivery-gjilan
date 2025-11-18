@@ -193,15 +193,37 @@ export default function AdminUsers() {
         </button>
       </div>
 
-      {/* SEARCH */}
-      <div className="mb-4">
-        <input
-          placeholder="Search users..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="p-2 border rounded w-full"
-        />
-      </div>
+     {/* QR CODE SECTION (MOVED UP) */}
+{qrCodeUrl && (
+  <div className="mb-6 p-6 border rounded-lg bg-white shadow text-center">
+    <h3 className="font-semibold mb-3">Login QR Code</h3>
+    <img src={qrCodeUrl} className="mx-auto w-48 h-48" />
+    <p className="mt-3 text-sm break-all">{loginLink}</p>
+
+    <button
+      onClick={() => {
+        const a = document.createElement("a");
+        a.href = qrCodeUrl!;
+        a.download = "login_qr.png";
+        a.click();
+      }}
+      className="mt-3 bg-gray-800 text-white px-3 py-1 rounded"
+    >
+      Download QR
+    </button>
+  </div>
+)}
+
+{/* SEARCH */}
+<div className="mb-4">
+  <input
+    placeholder="Search users..."
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    className="p-2 border rounded w-full"
+  />
+</div>
+
 
       {/* TABLE */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -286,26 +308,7 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {/* QR CODE POPUP */}
-      {qrCodeUrl && (
-        <div className="mt-8 p-6 border rounded-lg bg-white shadow text-center">
-          <h3 className="font-semibold mb-3">Login QR Code</h3>
-          <img src={qrCodeUrl} className="mx-auto w-48 h-48" />
-          <p className="mt-3 text-sm break-all">{loginLink}</p>
-
-          <button
-            onClick={() => {
-              const a = document.createElement("a");
-              a.href = qrCodeUrl!;
-              a.download = "login_qr.png";
-              a.click();
-            }}
-            className="mt-3 bg-gray-800 text-white px-3 py-1 rounded"
-          >
-            Download QR
-          </button>
-        </div>
-      )}
+    
     </div>
   );
 }

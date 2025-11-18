@@ -13,7 +13,29 @@ interface Store {
   name: string;
 }
 
-export default function EditProductModal({ product, categories, stores, onClose }) {
+interface ProductType {
+  id: number;
+  name: string;
+  price: number;
+  category_id: number;
+  image_url: string;
+  store_ids: number[];
+}
+
+interface Props {
+  product: ProductType;
+  categories: Category[];
+  stores: Store[];
+  onClose: () => void;
+}
+
+export default function EditProductModal({
+  product,
+  categories,
+  stores,
+  onClose,
+}: Props) {
+
   const [form, setForm] = useState({
     name: product.name,
     price: product.price,
@@ -27,10 +49,16 @@ export default function EditProductModal({ product, categories, stores, onClose 
 
   const [uploading, setUploading] = useState(false);
 
-  // Grouped categories
-  const parents = categories.filter((c) => c.parent_id === null);
-  const subcategories = categories.filter((c) => c.parent_id !== null);
+  /* ---------- CATEGORY GROUPS ---------- */
+  const parents: Category[] = categories.filter(
+    (c: Category) => c.parent_id === null
+  );
 
+  const subcategories: Category[] = categories.filter(
+    (c: Category) => c.parent_id !== null
+  );
+
+  /* ---------- IMAGE UPLOAD ---------- */
   async function uploadImage(file: File) {
     setUploading(true);
 
@@ -55,7 +83,7 @@ export default function EditProductModal({ product, categories, stores, onClose 
     setUploading(false);
   }
 
-  // Save
+  /* ---------- SAVE ---------- */
   const save = async () => {
     await fetch("/api/admin/products/update", {
       method: "POST",
@@ -72,6 +100,7 @@ export default function EditProductModal({ product, categories, stores, onClose 
     onClose();
   };
 
+  /* ---------- UI ---------- */
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div className="bg-gray-800 text-gray-100 p-6 rounded-lg w-96 shadow-xl border border-gray-700 space-y-4">
@@ -90,10 +119,10 @@ export default function EditProductModal({ product, categories, stores, onClose 
           type="number"
           className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
           value={form.price}
-          onChange={(e) => setForm({ ...form, price: e.target.value })}
+          onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
         />
 
-        {/* GROUPED CATEGORY SELECT */}
+        {/* CATEGORIES */}
         <select
           className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white"
           value={form.category_id}
@@ -103,11 +132,11 @@ export default function EditProductModal({ product, categories, stores, onClose 
         >
           <option value="">Select category…</option>
 
-          {parents.map((p) => (
+          {parents.map((p: Category) => (
             <optgroup key={p.id} label={p.name}>
               {subcategories
-                .filter((s) => s.parent_id === p.id)
-                .map((s) => (
+                .filter((s: Category) => s.parent_id === p.id)
+                .map((s: Category) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
                   </option>
@@ -120,7 +149,7 @@ export default function EditProductModal({ product, categories, stores, onClose 
         <div>
           <p className="text-sm mb-1">Available in stores:</p>
 
-          {stores.map((s) => (
+          {stores.map((s: Store) => (
             <label key={s.id} className="flex items-center gap-2 mb-1">
               <input
                 type="checkbox"
@@ -141,7 +170,9 @@ export default function EditProductModal({ product, categories, stores, onClose 
         {/* IMAGE UPLOAD */}
         <input
           type="file"
-          onChange={(e) => uploadImage(e.target.files![0])}
+          onChange={(e) =>
+            e.target.files && uploadImage(e.target.files[0])
+          }
           className="text-gray-200"
         />
 

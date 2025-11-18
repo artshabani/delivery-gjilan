@@ -91,7 +91,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearCart = () => setItems([]);
 
   const totalQuantity = items.reduce((s, i) => s + i.quantity, 0);
-  const totalPrice = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
+const totalPrice = items.reduce((s, i) => {
+  const effectivePrice =
+    i.product.is_on_sale && i.product.sale_price
+      ? i.product.sale_price
+      : i.product.price;
+
+  return s + effectivePrice * i.quantity;
+}, 0);
 
   return (
     <CartContext.Provider

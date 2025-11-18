@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
+import confetti from "canvas-confetti";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 import { useCart } from "@/context/CartContext";
@@ -17,17 +18,21 @@ export default function CartOverlay() {
   } = useCart();
 
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [confirmOrderOpen, setConfirmOrderOpen] = useState(false);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
+  const [confirmOrderOpen, setConfirmOrderOpen] = useState(false);
+
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState(false);
 
   const hasCart = totalQuantity > 0;
+
   /* -------------------------------------------------------
      PLACE ORDER
   -------------------------------------------------------- */
   async function placeOrder() {
-    try { 
+    try {
       toast.dismiss();
-      toast.loading("Placing your order…", { duration: Infinity });
+      setPlacingOrder(true);
 
       const orderPayload: any = {
         total: totalPrice,
@@ -43,46 +48,36 @@ export default function CartOverlay() {
         .select("id")
         .single();
 
-      if (orderErr || !order) {
-        toast.dismiss();
+      if (!order || orderErr) {
+        setPlacingOrder(false);
         toast.error("Failed to create order");
         return;
       }
 
       const orderId = order.id;
 
-      // *** FIX 4: Corrected Foreign Key Insertion Logic ***
-      const itemsPayload = cartItems.map(({ product, quantity }) => {
-const type = product.type;
-          return {
+      const itemsPayload = cartItems.map(({ product, quantity }) => ({
         order_id: orderId,
-        
-        // Only assign product_id if the type is EXPLICITLY 'grocery'
-        product_id: type === "grocery" ? product.id : null,
-        
-        // Only assign restaurant_item_id if the type is EXPLICITLY 'restaurant'
-        // (Assuming your restaurant items have type="restaurant")
-        restaurant_item_id: type === "restaurant" ? product.id : null, 
-        
+        product_id: product.type === "grocery" ? product.id : null,
+        restaurant_item_id: product.type === "restaurant" ? product.id : null,
         quantity,
         price: product.price,
         notes: product.notes ?? null,
         modifiers: product.modifiers ?? null,
-        item_type: type, // Store the actual type (or null)
-    };
-      });
+        item_type: product.type,
+      }));
 
       const { error: itemsErr } = await supabase
         .from("order_items")
         .insert(itemsPayload);
 
       if (itemsErr) {
-        toast.dismiss();
-        toast.error("Failed to insert items");
-        console.error("ITEMS INSERTION ERROR:", itemsErr); // Added console log for better debugging
+        setPlacingOrder(false);
+        toast.error("Failed to add items");
         return;
       }
 
+      // Send email
       await fetch(
         "https://qnwnybyebiczlwxssblx.supabase.co/functions/v1/send-order-email",
         {
@@ -104,17 +99,27 @@ const type = product.type;
       );
 
       clearCart();
-      toast.dismiss();
-      toast.success("Order placed!");
+      setPlacingOrder(false);
+
+      // Success popup + confetti
+      setOrderSuccess(true);
+
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        zIndex: 99999,
+      });
+
+      setTimeout(() => setOrderSuccess(false), 2000);
     } catch (err) {
-      console.error(err);
-      toast.dismiss();
+      setPlacingOrder(false);
       toast.error("Unexpected error.");
     }
   }
 
   /* -------------------------------------------------------
-     CART LIST
+     CART BODY
   -------------------------------------------------------- */
   const cartBody = (
     <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
@@ -122,106 +127,112 @@ const type = product.type;
         <p className="text-sm text-white/60">Your cart is empty.</p>
       )}
 
-      {cartItems.map(({ product, quantity }) => (
-        <div
-          key={`${product.id}-${product.notes ?? ""}`}
-          className="flex items-center justify-between gap-3 bg-slate-800/80 rounded-xl px-3 py-2"
-        >
-          <div className="flex items-center gap-3">
-            <div className="relative w-12 h-12 rounded-lg bg-slate-900 overflow-hidden">
-              <Image
-                src={
-                  product.image_url?.startsWith("http")
-                    ? product.image_url
-                    : "/fallback.jpg"
-                }
-                alt={product.name}
-                fill
-                className="object-cover"
-              />
+      {cartItems.map(({ product, quantity }) => {
+        const usedPrice =
+          product.is_on_sale && product.sale_price
+            ? product.sale_price
+            : product.price;
+
+        return (
+          <div
+            key={`${product.id}-${product.notes ?? ""}`}
+            className="flex items-center justify-between gap-3 bg-slate-800/80 rounded-xl px-3 py-2"
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative w-12 h-12 rounded-lg bg-slate-900 overflow-hidden">
+                <Image
+                  src={
+                    product.image_url?.startsWith("http")
+                      ? product.image_url
+                      : "/fallback.jpg"
+                  }
+                  alt={product.name}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+
+              <div className="max-w-[160px]">
+                <p className="text-sm font-medium text-white">{product.name}</p>
+
+                {product.notes && (
+                  <p className="text-xs text-blue-300 mt-1">{product.notes}</p>
+                )}
+
+                {product.is_on_sale && product.sale_price ? (
+                  <div className="flex flex-col leading-tight mt-1">
+                    <span className="text-green-400 font-semibold text-xs">
+                      €{product.sale_price.toFixed(2)} each
+                    </span>
+                    <span className="text-red-400 text-[11px] line-through opacity-70">
+                      €{product.price.toFixed(2)}
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-xs text-white/50">
+                    €{product.price.toFixed(2)} each
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="max-w-[160px]">
-              <p className="text-sm font-medium text-white">{product.name}</p>
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => decreaseItem(String(product.id))}
+                className="w-7 h-7 bg-slate-700 rounded-full text-white text-sm flex items-center justify-center"
+              >
+                -
+              </button>
 
-              {product.notes && (
-                <p className="text-xs text-blue-300 mt-1">
-                  {product.notes}
-                </p>
-              )}
+              <span className="text-sm font-semibold text-white">
+                {quantity}
+              </span>
 
-              <p className="text-xs text-white/50">
-                €{product.price.toFixed(2)} each
-              </p>
+              <button
+                onClick={() => addItem(product, 1, product.notes ?? "")}
+                className="w-7 h-7 bg-blue-600 rounded-full text-white text-sm flex items-center justify-center"
+              >
+                +
+              </button>
             </div>
           </div>
-
-          <div className="flex gap-2 items-center">
-            <button
-              onClick={() => decreaseItem(String(product.id))} // 👈 Apply String() here
-              className="w-7 h-7 bg-slate-700 rounded-full text-white text-sm flex items-center justify-center"
-            >
-              -
-            </button>
-
-            <span className="text-sm font-semibold text-white">{quantity}</span>
-
-            <button
-              onClick={() => addItem(product, 1, product.notes ?? "")}
-              className="w-7 h-7 bg-blue-600 rounded-full text-white text-sm flex items-center justify-center"
-            >
-              +
-            </button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 
   /* -------------------------------------------------------
-     UI
+     RENDER
   -------------------------------------------------------- */
   return (
     <>
-      {/* 🟦 WOLT-STYLE CART BADGE */}
+      {/* CART BADGE */}
       {hasCart && !isCartOpen && (
         <div className="fixed bottom-5 left-0 w-full flex justify-center z-40 pointer-events-none">
           <button
             onClick={() => setIsCartOpen(true)}
-            className="
-              pointer-events-auto 
-              w-[85%] 
-              py-4 
-              rounded-full 
-bg-[#2563eb]
-              text-white 
-              shadow-[0_6px_20px_rgba(0,0,0,0.45)]
-              flex items-center justify-between px-6
-              active:scale-95 transition
-            "
+            className="dg-cart-btn pointer-events-auto w-[85%] py-4 rounded-full bg-[#2563eb] text-white shadow-[0_6px_20px_rgba(0,0,0,0.45)] flex items-center justify-between px-6 active:scale-95 transition"
           >
             <span className="flex items-center gap-3 text-base">
-              <span className="
-                w-7 h-7 rounded-full bg-white/20 
-                flex items-center justify-center text-sm font-semibold
-              ">
+              <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm font-semibold">
                 {totalQuantity}
               </span>
               View order
             </span>
 
             <span
-              className={`text-base font-bold ${
-                totalPrice > 3 ? "hot-total" : "text-white"
-              }`}
-            >
-              €{totalPrice.toFixed(2)}
-            </span>
+  className={`text-base font-bold ${
+    totalPrice > 3 ? "hot-total" : "text-white"
+  }`}
+>
+  €{totalPrice.toFixed(2)}
+</span>
+
           </button>
         </div>
       )}
 
-      {/* 🟦 CART POPUP */}
+      {/* POPUP CART */}
       {isCartOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center">
           <div
@@ -232,7 +243,9 @@ bg-[#2563eb]
           <div className="relative z-10 w-[92%] max-w-md cart-border-track-blue">
             <div className="bg-slate-900 rounded-2xl shadow-2xl p-4 flex flex-col max-h-[80vh]">
               <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-semibold text-white">Your cart</h2>
+                <h2 className="text-lg font-semibold text-white">
+                  Your cart
+                </h2>
                 <button
                   onClick={() => setIsCartOpen(false)}
                   className="w-7 h-7 bg-slate-800 rounded-full text-white flex items-center justify-center"
@@ -243,17 +256,19 @@ bg-[#2563eb]
 
               {cartBody}
 
+              {/* SUBTOTAL */}
               <div className="mt-4 border-t border-white/10 pt-3 flex justify-between items-center">
                 <span className="text-sm font-semibold text-white">
                   Subtotal
                 </span>
                 <span
-                  className={`text-base font-bold ${
-                    totalPrice > 3 ? "hot-total" : "text-white"
-                  }`}
-                >
-                  €{totalPrice.toFixed(2)}
-                </span>
+  className={`text-base font-bold ${
+    totalPrice > 3 ? "hot-total" : "text-white"
+  }`}
+>
+  €{totalPrice.toFixed(2)}
+</span>
+
               </div>
 
               <div className="flex gap-3 mt-4">
@@ -279,7 +294,7 @@ bg-[#2563eb]
         </div>
       )}
 
-      {/* CONFIRM CLEAR CART */}
+      {/* CONFIRM CLEAR */}
       {confirmClearOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-[999]">
           <div
@@ -336,11 +351,12 @@ bg-[#2563eb]
 
             <div className="flex gap-3">
               <button
-                onClick={() => setConfirmOrderOpen(false)}
-                className="flex-1 py-2 bg-slate-700 rounded-lg"
-              >
-                Cancel
-              </button>
+  onClick={() => setConfirmOrderOpen(false)}
+  className="flex-1 py-2 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-lg transition"
+>
+  Cancel
+</button>
+
 
               <button
                 onClick={async () => {
@@ -355,6 +371,87 @@ bg-[#2563eb]
           </div>
         </div>
       )}
+
+      {/* FULLSCREEN LOADING */}
+      {placingOrder && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md"></div>
+
+          <div className="relative z-50 flex flex-col items-center animate-fadeIn">
+            <div className="w-32 h-32 rounded-full border-4 border-blue-500/40 border-t-blue-500 animate-spin"></div>
+
+            <p className="text-white text-xl font-medium mt-6">
+              Porosia duke u realizuar... <small>Korieri do ju kontaktoj!</small>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* SUCCESS POPUP */}
+      {orderSuccess && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-md"></div>
+
+          <div className="relative z-50 flex flex-col items-center animate-fadeIn">
+            <div className="w-40 h-40 rounded-full bg-green-500/20 flex items-center justify-center shadow-[0_0_40px_rgba(0,255,100,0.5)] backdrop-blur-xl">
+              <div className="text-green-400 text-7xl font-bold animate-pop">
+                ✓
+              </div>
+            </div>
+
+            <p className="text-white text-2xl font-semibold mt-6 animate-fadeInSlow">
+              Porosia u krye me sukses!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ANIMATIONS */}
+      <style jsx global>{`
+        @keyframes pop {
+          0% {
+            transform: scale(0.4);
+            opacity: 0;
+          }
+          60% {
+            transform: scale(1.2);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes fadeInSlow {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+
+        .animate-pop {
+          animation: pop 0.4s ease-out;
+        }
+
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        .animate-fadeInSlow {
+          animation: fadeInSlow 0.8s ease-out 0.2s forwards;
+        }
+      `}</style>
     </>
   );
 }

@@ -1,16 +1,21 @@
 "use client";
 
 import { useState } from "react";
-// Removed unused import: import { supabase } from "@/lib/supabase"; 
 
 interface Store {
-    id: number;
-    name: string;
+  id: number;
+  name: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  parent_id: number | null;
 }
 
 interface Props {
-  categories: any[];
-  stores: Store[]; // Accepts the list of stores
+  categories: Category[];
+  stores: Store[];
   onClose: () => void;
 }
 
@@ -22,26 +27,15 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
     image_url: "",
   });
 
-  const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([]); // State for selected stores
+  const [selectedStores, setSelectedStores] = useState<number[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const subcategories = categories.filter((c) => c.parent_id !== null);
+  // Group categories
   const parents = categories.filter((c) => c.parent_id === null);
+  const subcategories = categories.filter((c) => c.parent_id !== null);
 
-  // --- HANDLERS ---
-
-  // Handle store checkbox changes
-  const handleStoreChange = (storeId: number, isChecked: boolean) => {
-    setSelectedStoreIds(prev => 
-      isChecked
-        ? [...prev, storeId] // Add ID if checked
-        : prev.filter(id => id !== storeId) // Remove ID if unchecked
-    );
-  };
-
-  // UPLOAD FILE TO S3 (same as original)
-  const uploadImage = async (file: File) => {
+  async function uploadImage(file: File) {
     setUploading(true);
 
     const res = await fetch("/api/admin/products/sign-upload", {
@@ -49,7 +43,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         fileName: file.name,
-        fileType: file.type || "image/jpeg",
+        fileType: file.type,
       }),
     });
 
@@ -57,148 +51,151 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
 
     await fetch(uploadUrl, {
       method: "PUT",
-      headers: { "Content-Type": file.type || "image/jpeg" },
+      headers: { "Content-Type": file.type },
       body: file,
     });
 
     setForm((f) => ({ ...f, image_url: publicUrl }));
     setUploading(false);
-  };
+  }
 
-  const onFileChange = async (e: any) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await uploadImage(file);
-  };
-
-  // MODIFIED: Use API route instead of direct Supabase call
-  const addProduct = async () => {
+  const create = async () => {
     setError(null);
-    if (selectedStoreIds.length === 0) {
-        setError("You must select at least one store.");
-        return;
+
+    if (!form.name || !form.price || !form.category_id) {
+      setError("All fields are required.");
+      return;
+    }
+    if (selectedStores.length === 0) {
+      setError("Choose at least one store.");
+      return;
     }
 
-    const payload = {
-        name: form.name,
+    await fetch("/api/admin/products/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...form,
         price: Number(form.price),
         category_id: Number(form.category_id),
-        image_url: form.image_url,
-        store_ids: selectedStoreIds, // PASS THE STORE IDS TO THE API
-        in_stock: true 
-    };
+        store_ids: selectedStores,
+        in_stock: true,
+      }),
+    });
 
-    try {
-        const res = await fetch("/api/admin/products/create", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        });
-
-        const result = await res.json();
-
-        if (!res.ok) {
-            setError(result.error || "Failed to add product and link to stores.");
-            return;
-        }
-
-        onClose(); // Close and refresh parent table
-    } catch (err) {
-        setError("Network error occurred during submission.");
-    }
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-900 p-6 rounded-lg w-96 space-y-3 shadow-xl">
-        <h2 className="text-xl font-semibold mb-2">Add Product</h2>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+      <div className="bg-gray-800 text-gray-100 p-6 rounded-lg shadow-xl w-96 space-y-4 border border-gray-700">
 
+        <h2 className="text-xl font-semibold">Add Product</h2>
+
+        {/* NAME */}
         <input
-          className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+          className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
           placeholder="Name"
           value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, name: e.target.value })
+          }
         />
 
+        {/* PRICE */}
         <input
-          className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
-          placeholder="Price"
           type="number"
+          className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+          placeholder="Price"
           value={form.price}
-          onChange={(e) => setForm({ ...form, price: e.target.value })}
+          onChange={(e) =>
+            setForm({ ...form, price: e.target.value })
+          }
         />
 
-        {/* Grouped category selector */}
+        {/* GROUPED CATEGORY SELECT */}
         <select
-          className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+          className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
           value={form.category_id}
           onChange={(e) =>
             setForm({ ...form, category_id: e.target.value })
           }
         >
-          <option value="">Select Subcategory…</option>
+          <option value="">Select category…</option>
 
-          {parents.map((p) => (
-            <optgroup key={p.id} label={p.name}>
+          {parents.map((parent) => (
+            <optgroup key={parent.id} label={parent.name}>
               {subcategories
-                .filter((s) => s.parent_id === p.id)
-                .map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
+                .filter((s) => s.parent_id === parent.id)
+                .map((sub) => (
+                  <option key={sub.id} value={sub.id}>
+                    {sub.name}
                   </option>
                 ))}
             </optgroup>
           ))}
         </select>
-        
-        {/* Store Selection Checkboxes */}
-        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-            <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">
-                Available at Stores
+
+        {/* STORES */}
+        <div className="pt-2 border-t border-gray-700">
+          <p className="text-sm font-semibold mb-2">Available in Stores</p>
+
+          {stores.map((store) => (
+            <label key={store.id} className="flex items-center gap-2 mb-1">
+              <input
+                type="checkbox"
+                checked={selectedStores.includes(store.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedStores([...selectedStores, store.id]);
+                  } else {
+                    setSelectedStores(
+                      selectedStores.filter((id) => id !== store.id)
+                    );
+                  }
+                }}
+              />
+              {store.name}
             </label>
-            <div className="space-y-1">
-                {stores.map(store => (
-                    <div key={store.id} className="flex items-center">
-                        <input
-                            id={`store-${store.id}`}
-                            type="checkbox"
-                            checked={selectedStoreIds.includes(store.id)}
-                            onChange={(e) => handleStoreChange(store.id, e.target.checked)}
-                            className="h-4 w-4 text-green-600 border-gray-300 dark:border-gray-600 rounded focus:ring-green-500"
-                        />
-                        <label htmlFor={`store-${store.id}`} className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                            {store.name}
-                        </label>
-                    </div>
-                ))}
-            </div>
-            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+          ))}
         </div>
 
-        <input type="file" onChange={onFileChange} />
+        {/* IMAGE UPLOAD */}
+        <input
+          type="file"
+          className="text-gray-200"
+          onChange={(e) => uploadImage(e.target.files![0])}
+        />
 
         {form.image_url && (
           <img
             src={form.image_url}
-            className="w-20 h-20 mt-2 object-cover rounded border"
-            alt="Uploaded Product Preview"
+            className="w-20 h-20 rounded border border-gray-600 object-cover"
           />
         )}
 
+        {/* ERROR */}
+        {error && (
+          <p className="text-red-400 text-sm">{error}</p>
+        )}
+
+        {/* SAVE */}
         <button
           className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded disabled:opacity-50"
-          onClick={addProduct}
-          disabled={uploading || selectedStoreIds.length === 0 || !form.name || !form.price || !form.category_id}
+          onClick={create}
+          disabled={uploading}
         >
           {uploading ? "Uploading..." : "Add Product"}
         </button>
 
+        {/* CANCEL */}
         <button
-          className="w-full py-2 rounded text-gray-700 dark:text-gray-300"
+          className="w-full text-gray-300 py-2"
           onClick={onClose}
         >
           Cancel
         </button>
+
       </div>
     </div>
   );

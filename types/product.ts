@@ -12,4 +12,6 @@ export interface Product {
   notes?: string;
   modifiers?: Record<string, boolean>;
   type?: "grocery" | "restaurant";
+  is_on_sale?: boolean
+  sale_price?: number
 }

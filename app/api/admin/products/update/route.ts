@@ -10,10 +10,10 @@ const supabase = createClient(
 export async function POST(req: Request) {
   const body = await req.json();
 
-  // Destructure product fields, including the critical store_ids array
-  const { id, name, price, category_id, image_url, in_stock, store_ids } = body;
+  // Destructure product fields, NOW INCLUDING the optional sale_price
+  const { id, name, price, category_id, image_url, in_stock, sale_price, store_ids } = body;
 
-  // Validation: Ensure required fields are present
+  // Validation: Ensure required fields are present (sale_price is optional)
   if (!id || !name || !price || !category_id || !store_ids) {
     return NextResponse.json(
       { error: "Missing required fields (id, name, price, category_id, store_ids must be provided)" },
@@ -22,6 +22,11 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Determine the final value for sale_price:
+    // 1. If it's explicitly passed as empty string or null (to clear the sale), set it to null.
+    // 2. Otherwise, use the provided value.
+    const final_sale_price = (sale_price === "" || sale_price === null) ? null : sale_price;
+    
     // 1. UPDATE the product details in the 'products' table
     const { error: productError } = await supabase
       .from("products")
@@ -31,6 +36,9 @@ export async function POST(req: Request) {
         category_id,
         image_url,
         in_stock,
+        // --- ADDED SALE PRICE ---
+        sale_price: final_sale_price, 
+        // ------------------------
       })
       .eq("id", id); // Target the specific product ID
 

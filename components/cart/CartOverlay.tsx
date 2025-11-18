@@ -25,7 +25,7 @@ export default function CartOverlay() {
      PLACE ORDER
   -------------------------------------------------------- */
   async function placeOrder() {
-    try {
+    try { 
       toast.dismiss();
       toast.loading("Placing your order…", { duration: Infinity });
 

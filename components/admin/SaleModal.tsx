@@ -3,8 +3,23 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-export default function SaleModal({ product, onClose, onSaved }) {
-  const [salePrice, setSalePrice] = useState(product.sale_price || "");
+interface ProductType {
+  id: number;
+  name: string;
+  price: number;
+  sale_price: number | null;
+}
+
+interface Props {
+  product: ProductType;
+  onClose: () => void;
+  onSaved: () => void;
+}
+
+export default function SaleModal({ product, onClose, onSaved }: Props) {
+  const [salePrice, setSalePrice] = useState<string>(
+    product.sale_price?.toString() || ""
+  );
 
   const save = async () => {
     await supabase

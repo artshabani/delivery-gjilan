@@ -31,9 +31,8 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Group categories
-  const parents = categories.filter((c) => c.parent_id === null);
-  const subcategories = categories.filter((c) => c.parent_id !== null);
+  const parents: Category[] = categories.filter((c) => c.parent_id === null);
+  const subcategories: Category[] = categories.filter((c) => c.parent_id !== null);
 
   async function uploadImage(file: File) {
     setUploading(true);
@@ -66,6 +65,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
       setError("All fields are required.");
       return;
     }
+
     if (selectedStores.length === 0) {
       setError("Choose at least one store.");
       return;
@@ -97,9 +97,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
           className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
           placeholder="Name"
           value={form.name}
-          onChange={(e) =>
-            setForm({ ...form, name: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
         />
 
         {/* PRICE */}
@@ -108,26 +106,22 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
           className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
           placeholder="Price"
           value={form.price}
-          onChange={(e) =>
-            setForm({ ...form, price: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, price: e.target.value })}
         />
 
-        {/* GROUPED CATEGORY SELECT */}
+        {/* CATEGORIES */}
         <select
           className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
           value={form.category_id}
-          onChange={(e) =>
-            setForm({ ...form, category_id: e.target.value })
-          }
+          onChange={(e) => setForm({ ...form, category_id: e.target.value })}
         >
           <option value="">Select category…</option>
 
-          {parents.map((parent) => (
+          {parents.map((parent: Category) => (
             <optgroup key={parent.id} label={parent.name}>
               {subcategories
-                .filter((s) => s.parent_id === parent.id)
-                .map((sub) => (
+                .filter((sub: Category) => sub.parent_id === parent.id)
+                .map((sub: Category) => (
                   <option key={sub.id} value={sub.id}>
                     {sub.name}
                   </option>
@@ -140,7 +134,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
         <div className="pt-2 border-t border-gray-700">
           <p className="text-sm font-semibold mb-2">Available in Stores</p>
 
-          {stores.map((store) => (
+          {stores.map((store: Store) => (
             <label key={store.id} className="flex items-center gap-2 mb-1">
               <input
                 type="checkbox"
@@ -164,7 +158,9 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
         <input
           type="file"
           className="text-gray-200"
-          onChange={(e) => uploadImage(e.target.files![0])}
+          onChange={(e) => {
+            if (e.target.files) uploadImage(e.target.files[0]);
+          }}
         />
 
         {form.image_url && (
@@ -174,12 +170,10 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
           />
         )}
 
-        {/* ERROR */}
-        {error && (
-          <p className="text-red-400 text-sm">{error}</p>
-        )}
+        {/* ERROR MESSAGE */}
+        {error && <p className="text-red-400 text-sm">{error}</p>}
 
-        {/* SAVE */}
+        {/* ADD BUTTON */}
         <button
           className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded disabled:opacity-50"
           onClick={create}
@@ -188,11 +182,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
           {uploading ? "Uploading..." : "Add Product"}
         </button>
 
-        {/* CANCEL */}
-        <button
-          className="w-full text-gray-300 py-2"
-          onClick={onClose}
-        >
+        <button className="w-full text-gray-300 py-2" onClick={onClose}>
           Cancel
         </button>
 

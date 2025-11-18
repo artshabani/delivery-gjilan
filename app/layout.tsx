@@ -4,6 +4,8 @@ import { ClientProviders } from "./ClientProviders";
 import { Toaster } from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 import CartOverlay from "@/components/cart/CartOverlay";
+import { Analytics } from '@vercel/analytics/next';
+
 
 export const metadata = {
   title: "PrePhase0",
@@ -26,7 +28,7 @@ export default function RootLayout({
       <body>
         <ClientProviders>
           {children}
-
+          <Analytics />
           {/* 🔥 Global cart badge + popup on every page */}
           <CartOverlay />
         </ClientProviders>

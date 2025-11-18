@@ -13,19 +13,32 @@ export default function AdminProductsPage() {
 
   // 🔥 ALWAYS RUN HOOKS EVEN IF LOADING
   const [categories, setCategories] = useState<any[]>([]);
+  const [stores, setStores] = useState<any[]>([]); 
   const [showAddModal, setShowAddModal] = useState(false);
   const [filterCategory, setFilterCategory] = useState("");
   const [refresh, setRefresh] = useState(0);
 
-  // LOAD CATEGORIES
+  // Function to trigger refresh across the application
+  const handleProductChange = () => {
+    setRefresh((r) => r + 1);
+  }
+
+  // LOAD CATEGORIES AND STORES
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
+      // 1. Fetch Categories
+      const { data: catData } = await supabase
         .from("product_categories")
         .select("*")
         .order("sort_order");
+        
+      // 2. Fetch Stores (needed for the modal)
+      const { data: storeData } = await supabase
+        .from("stores")
+        .select("id, name");
 
-      setCategories(data || []);
+      setCategories(catData || []);
+      setStores(storeData || []); 
     };
     load();
   }, []);
@@ -87,15 +100,20 @@ export default function AdminProductsPage() {
         </select>
       </div>
 
-      <ProductTable />
+      <ProductTable 
+        refresh={refresh} // Pass refresh prop
+        filterCategory={filterCategory} // Pass filter prop
+        onProductChange={handleProductChange} // <-- NEW: Pass the refresh callback
+      />
 
 
       {showAddModal && (
         <AddProductModal
           categories={categories}
+          stores={stores} // Passes the fetched stores
           onClose={() => {
             setShowAddModal(false);
-            setRefresh((r) => r + 1);
+            handleProductChange(); // Use the new handler
           }}
         />
       )}

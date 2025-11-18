@@ -7,6 +7,7 @@ import { Category } from "@/types/category";
 import { Product } from "@/types/product";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { fetchAvailableProducts } from "@/lib/productFetch"; // 👈 NEW IMPORT
 
 export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -42,25 +43,44 @@ export default function ProductsPage() {
     checkAdmin();
   }, []);
 
-  /* ---------------- FETCH DATA ---------------- */
+  /* ---------------- FETCH DATA (MODIFIED) ---------------- */
   useEffect(() => {
     const load = async () => {
+      // Fetch ALL Categories (no change needed here)
       const { data: catData } = await supabase
         .from("product_categories")
         .select("*")
         .order("sort_order");
 
-      const { data: prodData } = await supabase
-        .from("products")
-        .select("*");
+      // 💥 MODIFICATION: Fetch only products from currently open stores
+      const prodData = await fetchAvailableProducts();
 
       setCategories(catData || []);
-      setProducts(prodData || []);
+      setProducts(prodData || []); // Use the filtered data
       setLoading(false);
     };
 
     load();
-  }, []);
+    
+    // Optional: Add real-time listener for store status changes (highly recommended)
+    const storeStatusChannel = supabase
+        .channel("store_status_changes")
+        .on(
+            "postgres_changes",
+            {
+                event: "UPDATE",
+                schema: "public",
+                table: "stores",
+            },
+            () => load() // Reload products when a store opens/closes
+        )
+        .subscribe();
+
+    return () => {
+        supabase.removeChannel(storeStatusChannel);
+    };
+
+  }, []); // Dependency array is empty, runs once on mount
 
   /* ---------------- CATEGORY LOGIC ---------------- */
   const level1Cats = categories.filter((c) => c.parent_id === null);
@@ -73,7 +93,8 @@ export default function ProductsPage() {
           return (a.parent_id ?? 0) - (b.parent_id ?? 0);
         if (a.sort_order !== b.sort_order)
           return (a.sort_order ?? 0) - (b.sort_order ?? 0);
-        return a.id - b.id;
+        // Note: Casting to number might be needed if a.id is string/BigInt, but looks fine here
+        return (a.id as number) - (b.id as number); 
       }),
     [subCatsRaw]
   );
@@ -169,12 +190,13 @@ export default function ProductsPage() {
   if (loading)
     return (
       <div className="min-h-screen bg-black text-white p-4">
-        Loading…
+        Checking store availability and loading products...
       </div>
     );
 
   /* ---------------- RENDER ---------------- */
   return (
+    // ... rest of the render function is unchanged
     <div className="min-h-screen w-full bg-black text-white pb-28">
 
       {/* ---------------- NAVIGATION ---------------- */}
@@ -289,6 +311,7 @@ export default function ProductsPage() {
             products.filter((p) => p.category_id === sub.id)
           );
 
+          // NOTE: If the entire list of products is empty, the no-store message will show.
           if (!subProducts.length) return null;
 
           return (
@@ -339,5 +362,6 @@ export default function ProductsPage() {
         <div ref={sentinelRef} className="h-10" />
       </div>
     </div>
+    // ... end of render function
   );
 }

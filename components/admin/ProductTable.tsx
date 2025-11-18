@@ -27,10 +27,19 @@ import {
 } from "lucide-react";
 
 // ===================================================================
+// START: Props for this component
+// ===================================================================
+interface ProductTableProps {
+  refresh: number;
+  filterCategory: string;
+  onProductChange: () => void; // Callback to trigger parent refresh
+}
+
+// ===================================================================
 // MAIN START
 // ===================================================================
 
-export default function ProductTable() {
+export default function ProductTable({ refresh, filterCategory, onProductChange }: ProductTableProps) {
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
 
@@ -44,7 +53,17 @@ export default function ProductTable() {
 
   // Load products + categories ----------------------------
   const load = async () => {
-    const { data: prod } = await supabase.from("products").select("*").order("id");
+    // 1. Setup Query
+    let productQuery = supabase.from("products").select("*");
+    
+    // Apply filter if category is selected
+    if (filterCategory) {
+      productQuery = productQuery.eq("category_id", filterCategory);
+    }
+    productQuery = productQuery.order("id");
+
+    const { data: prod } = await productQuery;
+
     const { data: cats } = await supabase
       .from("product_categories")
       .select("*")
@@ -54,9 +73,10 @@ export default function ProductTable() {
     setCategories(cats || []);
   };
 
+  // Run on initial load, refresh trigger, or category filter change
   useEffect(() => {
     load();
-  }, []);
+  }, [refresh, filterCategory]); // <-- Dependency change for refresh/filter
 
   // Group Level1 + Level2 ----------------------------------
   const groupedCats = useMemo(() => {
@@ -115,12 +135,39 @@ export default function ProductTable() {
 
     input.click();
   };
+  
+  // FIXED DELETE FUNCTION (Calls the API route) -----------------------------
+  const deleteProduct = async (id: number) => {
+    try {
+      const res = await fetch("/api/admin/products/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+
+      if (!res.ok) {
+        const result = await res.json();
+        console.error("API Deletion Error:", result.error);
+        alert(`Failed to delete product: ${result.error}`);
+        return;
+      }
+
+      // Close the modal and refresh the table
+      setDeleteConfirm(null);
+      onProductChange(); // <-- CRITICAL: Triggers parent refresh
+    } catch (e) {
+      console.error("Network or Unexpected Deletion Error:", e);
+      alert("An unexpected error occurred during deletion.");
+    }
+  };
 
   // Bulk delete ---------------------------------------------
+  // NOTE: This uses direct Supabase delete, which might fail on foreign key.
+  // It should also be updated to use an API route if links need to be cleaned up.
   const bulkDelete = async () => {
     await supabase.from("products").delete().in("id", selected);
     setSelected([]);
-    load();
+    onProductChange(); // <-- Use the new handler
   };
 
   // Bulk remove sale ----------------------------------------
@@ -130,7 +177,7 @@ export default function ProductTable() {
       .update({ is_on_sale: false, sale_price: null })
       .in("id", selected);
 
-    load();
+    onProductChange(); // <-- Use the new handler
     setSelected([]);
   };
 
@@ -184,6 +231,7 @@ export default function ProductTable() {
                   <img
                     src={p.image_url}
                     className="w-14 h-14 object-cover rounded border"
+                    alt={p.name}
                   />
                 ) : (
                   <div className="w-14 h-14 flex items-center justify-center rounded border">
@@ -262,9 +310,9 @@ export default function ProductTable() {
             >
               <option value="">Select...</option>
 
-              {groupedCats.level1.map((parent) => (
+              {groupedCats.level1.map((parent: any) => (
                 <optgroup key={parent.id} label={parent.name}>
-                  {groupedCats.level2Map[parent.id]?.map((child) => (
+                  {groupedCats.level2Map[parent.id]?.map((child: any) => (
                     <option key={child.id} value={child.id}>
                       &nbsp;&nbsp;{child.name}
                     </option>
@@ -324,7 +372,7 @@ export default function ProductTable() {
         },
       },
     ],
-    [products, selected, groupedCats, uploadingId]
+    [products, selected, groupedCats, uploadingId, deleteProduct]
   );
 
   // Table instance -----------------------------------------
@@ -440,11 +488,7 @@ const table = useReactTable({
         <DeleteDialog
           id={deleteConfirm}
           onClose={() => setDeleteConfirm(null)}
-          onConfirm={async () => {
-            await supabase.from("products").delete().eq("id", deleteConfirm);
-            setDeleteConfirm(null);
-            load();
-          }}
+          onConfirm={() => deleteProduct(deleteConfirm)} // <-- FIXED: Calls the new API-based delete function
         />
       )}
     </div>

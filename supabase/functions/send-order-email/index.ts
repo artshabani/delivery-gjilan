@@ -123,10 +123,12 @@ serve(async (req: Request): Promise<Response> => {
     /* ---------------------------------------------------------
         Send the email
     --------------------------------------------------------- */
+    const subject = `🔥 New order from ${firstName} ${lastName}`; // <-- MODIFIED SUBJECT LINE
+    
     await resend.emails.send({
       from: "Delivery Gjilan <onboarding@resend.dev>",
       to: "artshabani2002@gmail.com",
-      subject: `🔥 New Order #${orderId}`,
+      subject: subject, // Use the new subject variable
       html,
     });
 

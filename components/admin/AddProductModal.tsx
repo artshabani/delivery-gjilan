@@ -1,14 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+// Removed unused import: import { supabase } from "@/lib/supabase"; 
+
+interface Store {
+    id: number;
+    name: string;
+}
 
 interface Props {
   categories: any[];
+  stores: Store[]; // Accepts the list of stores
   onClose: () => void;
 }
 
-export default function AddProductModal({ categories, onClose }: Props) {
+export default function AddProductModal({ categories, stores, onClose }: Props) {
   const [form, setForm] = useState({
     name: "",
     price: "",
@@ -16,12 +22,25 @@ export default function AddProductModal({ categories, onClose }: Props) {
     image_url: "",
   });
 
+  const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([]); // State for selected stores
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const subcategories = categories.filter((c) => c.parent_id !== null);
   const parents = categories.filter((c) => c.parent_id === null);
 
-  // UPLOAD FILE TO S3
+  // --- HANDLERS ---
+
+  // Handle store checkbox changes
+  const handleStoreChange = (storeId: number, isChecked: boolean) => {
+    setSelectedStoreIds(prev => 
+      isChecked
+        ? [...prev, storeId] // Add ID if checked
+        : prev.filter(id => id !== storeId) // Remove ID if unchecked
+    );
+  };
+
+  // UPLOAD FILE TO S3 (same as original)
   const uploadImage = async (file: File) => {
     setUploading(true);
 
@@ -52,15 +71,41 @@ export default function AddProductModal({ categories, onClose }: Props) {
     await uploadImage(file);
   };
 
+  // MODIFIED: Use API route instead of direct Supabase call
   const addProduct = async () => {
-    await supabase.from("products").insert({
-      name: form.name,
-      price: Number(form.price),
-      category_id: Number(form.category_id),
-      image_url: form.image_url,
-    });
+    setError(null);
+    if (selectedStoreIds.length === 0) {
+        setError("You must select at least one store.");
+        return;
+    }
 
-    onClose();
+    const payload = {
+        name: form.name,
+        price: Number(form.price),
+        category_id: Number(form.category_id),
+        image_url: form.image_url,
+        store_ids: selectedStoreIds, // PASS THE STORE IDS TO THE API
+        in_stock: true 
+    };
+
+    try {
+        const res = await fetch("/api/admin/products/create", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+            setError(result.error || "Failed to add product and link to stores.");
+            return;
+        }
+
+        onClose(); // Close and refresh parent table
+    } catch (err) {
+        setError("Network error occurred during submission.");
+    }
   };
 
   return (
@@ -105,6 +150,30 @@ export default function AddProductModal({ categories, onClose }: Props) {
             </optgroup>
           ))}
         </select>
+        
+        {/* Store Selection Checkboxes */}
+        <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">
+                Available at Stores
+            </label>
+            <div className="space-y-1">
+                {stores.map(store => (
+                    <div key={store.id} className="flex items-center">
+                        <input
+                            id={`store-${store.id}`}
+                            type="checkbox"
+                            checked={selectedStoreIds.includes(store.id)}
+                            onChange={(e) => handleStoreChange(store.id, e.target.checked)}
+                            className="h-4 w-4 text-green-600 border-gray-300 dark:border-gray-600 rounded focus:ring-green-500"
+                        />
+                        <label htmlFor={`store-${store.id}`} className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                            {store.name}
+                        </label>
+                    </div>
+                ))}
+            </div>
+            {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+        </div>
 
         <input type="file" onChange={onFileChange} />
 
@@ -112,13 +181,14 @@ export default function AddProductModal({ categories, onClose }: Props) {
           <img
             src={form.image_url}
             className="w-20 h-20 mt-2 object-cover rounded border"
+            alt="Uploaded Product Preview"
           />
         )}
 
         <button
-          className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded"
+          className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded disabled:opacity-50"
           onClick={addProduct}
-          disabled={uploading}
+          disabled={uploading || selectedStoreIds.length === 0 || !form.name || !form.price || !form.category_id}
         >
           {uploading ? "Uploading..." : "Add Product"}
         </button>

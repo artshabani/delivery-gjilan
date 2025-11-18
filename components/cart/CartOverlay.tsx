@@ -19,15 +19,8 @@ export default function CartOverlay() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [confirmOrderOpen, setConfirmOrderOpen] = useState(false);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
 
   const hasCart = totalQuantity > 0;
-
-  useEffect(() => {
-    const stored = localStorage.getItem("dg_user_id");
-    setUserId(stored);
-  }, []);
-
   /* -------------------------------------------------------
      PLACE ORDER
   -------------------------------------------------------- */
@@ -41,6 +34,7 @@ export default function CartOverlay() {
         created_at: new Date().toISOString(),
       };
 
+      const userId = localStorage.getItem("dg_user_id");
       if (userId) orderPayload.user_id = userId;
 
       const { data: order, error: orderErr } = await supabase

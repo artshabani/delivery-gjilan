@@ -1,11 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-// Ensure you are using the service role key for transaction safety
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -28,7 +22,7 @@ export async function POST(req: Request) {
     const final_sale_price = (sale_price === "" || sale_price === null) ? null : sale_price;
     
     // 1. UPDATE the product details in the 'products' table
-    const { error: productError } = await supabase
+    const { error: productError } = await adminSupabase
       .from("products")
       .update({
         name,
@@ -48,7 +42,7 @@ export async function POST(req: Request) {
     }
     
     // 2. DELETE existing product-store links
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await adminSupabase
         .from("product_store_links")
         .delete()
         .eq("product_id", id);
@@ -64,7 +58,7 @@ export async function POST(req: Request) {
       store_id: storeId,
     }));
     
-    const { error: linksError } = await supabase
+    const { error: linksError } = await adminSupabase
       .from("product_store_links")
       .insert(linksPayload);
       

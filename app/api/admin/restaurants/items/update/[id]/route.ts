@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function POST(
   req: Request,
@@ -10,7 +8,7 @@ export async function POST(
   const { id } = await context.params;
   const body = await req.json();
 
-  const { error } = await supabase
+  const { error } = await adminSupabase
     .from("restaurant_items")
     .update({
       name: body.name,

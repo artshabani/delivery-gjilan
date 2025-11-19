@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function POST(req: Request) {
   try {
@@ -13,7 +8,7 @@ export async function POST(req: Request) {
 
     console.log("🟦 Received token:", token);
 
-    const { data, error } = await supabase
+    const { data, error } = await adminSupabase
       .from("login_tokens")
       .select("user_id")
       .eq("token", token)

@@ -1,13 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: { autoRefreshToken: false, persistSession: false },
-  }
-);
+import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function POST(req: Request) {
   const { user_id, email, first_name, last_name, phone, address } = await req.json();
@@ -17,7 +9,7 @@ export async function POST(req: Request) {
   }
 
   // 1. Update email in auth
-  const { error: emailError } = await supabase.auth.admin.updateUserById(
+  const { error: emailError } = await adminSupabase.auth.admin.updateUserById(
     user_id,
     { email }
   );
@@ -30,7 +22,7 @@ export async function POST(req: Request) {
   }
 
   // 2. Update profile fields
-  const { error: profileError } = await supabase
+  const { error: profileError } = await adminSupabase
     .from("user_profiles")
     .update({
       first_name,

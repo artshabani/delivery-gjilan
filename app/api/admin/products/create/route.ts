@@ -1,11 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-// Ensure you are using the service role key for transaction safety
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -23,7 +17,7 @@ export async function POST(req: Request) {
 
   try {
     // 3. INSERT the new product and retrieve its generated ID
-    const { data: productData, error: productError } = await supabase
+    const { data: productData, error: productError } = await adminSupabase
       .from("products")
       .insert({
         name,
@@ -49,7 +43,7 @@ export async function POST(req: Request) {
     }));
     
     // 5. INSERT the links into product_store_links
-    const { error: linksError } = await supabase
+    const { error: linksError } = await adminSupabase
       .from("product_store_links")
       .insert(linksPayload);
       

@@ -48,6 +48,8 @@ export default function EditProductModal({
   );
 
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   /* ---------- CATEGORY GROUPS ---------- */
   const parents: Category[] = categories.filter(
@@ -61,43 +63,72 @@ export default function EditProductModal({
   /* ---------- IMAGE UPLOAD ---------- */
   async function uploadImage(file: File) {
     setUploading(true);
+    setError(null);
 
-    const res = await fetch("/api/admin/products/sign-upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fileName: file.name,
-        fileType: file.type,
-      }),
-    });
+    try {
+      const res = await fetch("/api/admin/products/sign-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileType: file.type,
+        }),
+      });
 
-    const { uploadUrl, publicUrl } = await res.json();
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to get upload URL");
+      }
 
-    await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": file.type },
-      body: file,
-    });
+      const { uploadUrl, publicUrl } = await res.json();
 
-    setForm((f) => ({ ...f, image_url: publicUrl }));
-    setUploading(false);
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Failed to upload image to S3");
+      }
+
+      setForm((f) => ({ ...f, image_url: publicUrl }));
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
   }
 
   /* ---------- SAVE ---------- */
   const save = async () => {
-    await fetch("/api/admin/products/update", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: product.id,
-        ...form,
-        price: Number(form.price),
-        category_id: Number(form.category_id),
-        store_ids: selectedStores,
-      }),
-    });
+    setError(null);
+    setSaving(true);
 
-    onClose();
+    try {
+      const res = await fetch("/api/admin/products/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: product.id,
+          ...form,
+          price: Number(form.price),
+          category_id: Number(form.category_id),
+          store_ids: selectedStores,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to update product");
+      }
+
+      onClose();
+    } catch (err: any) {
+      setError(err.message || "Failed to update product");
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* ---------- UI ---------- */
@@ -168,13 +199,19 @@ export default function EditProductModal({
         </div>
 
         {/* IMAGE UPLOAD */}
-        <input
-          type="file"
-          onChange={(e) =>
-            e.target.files && uploadImage(e.target.files[0])
-          }
-          className="text-gray-200"
-        />
+        <div>
+          <input
+            type="file"
+            onChange={(e) =>
+              e.target.files && uploadImage(e.target.files[0])
+            }
+            className="text-gray-200"
+            disabled={uploading}
+          />
+          {uploading && (
+            <p className="text-sm text-gray-400 mt-1">Uploading image...</p>
+          )}
+        </div>
 
         {form.image_url && (
           <img
@@ -183,18 +220,23 @@ export default function EditProductModal({
           />
         )}
 
+        {/* ERROR MESSAGE */}
+        {error && <p className="text-red-400 text-sm">{error}</p>}
+
         {/* SAVE */}
         <button
           onClick={save}
-          className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded"
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={uploading || saving}
         >
-          Save Changes
+          {saving ? "Saving..." : uploading ? "Uploading..." : "Save Changes"}
         </button>
 
         {/* CANCEL */}
         <button
           onClick={onClose}
-          className="w-full text-gray-400 py-1"
+          className="w-full text-gray-400 py-1 disabled:opacity-50"
+          disabled={uploading || saving}
         >
           Cancel
         </button>

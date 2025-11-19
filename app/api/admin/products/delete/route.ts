@@ -1,11 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-// Use service role key
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -20,7 +14,7 @@ export async function POST(req: Request) {
 
   try {
     // 0. DELETE ORDER ITEMS (foreign key)
-    const { error: orderItemError } = await supabase
+    const { error: orderItemError } = await adminSupabase
       .from("order_items")
       .delete()
       .eq("product_id", id);
@@ -34,7 +28,7 @@ export async function POST(req: Request) {
     }
 
     // 1. DELETE STORE LINKS (CORRECTED TABLE NAME)
-    const { error: linkError } = await supabase
+    const { error: linkError } = await adminSupabase
       .from("product_stores") // <-- FIXED
       .delete()
       .eq("product_id", id);
@@ -48,7 +42,7 @@ export async function POST(req: Request) {
     }
 
     // 2. DELETE MAIN PRODUCT
-    const { error: productError } = await supabase
+    const { error: productError } = await adminSupabase
       .from("products")
       .delete()
       .eq("id", id);

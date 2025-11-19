@@ -1,13 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: { autoRefreshToken: false, persistSession: false },
-  }
-);
+import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -20,7 +12,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("login_tokens")
     .select("token")
     .eq("user_id", user_id)

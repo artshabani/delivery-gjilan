@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("restaurant_id");
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("restaurant_items")
     .select("*")
     .eq("restaurant_id", id)

@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { adminSupabase } from "@/lib/supabase-admin";
 import { nanoid } from "nanoid";
-
-// Backend client (service role)
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: { autoRefreshToken: false, persistSession: false },
-  }
-);
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +11,7 @@ export async function POST(req: Request) {
     }
 
     // 1. Create the auth user
-    const { data, error } = await supabase.auth.admin.createUser({
+    const { data, error } = await adminSupabase.auth.admin.createUser({
       email,
       email_confirm: true,
     });
@@ -32,7 +23,7 @@ export async function POST(req: Request) {
     const userId = data.user.id;
 
     // 2. Insert profile row
-    const { error: profileError } = await supabase
+    const { error: profileError } = await adminSupabase
       .from("user_profiles")
       .insert({
         id: userId,
@@ -52,7 +43,7 @@ export async function POST(req: Request) {
     // 3. Generate permanent QR login token
     const token = nanoid(32);
 
-    const { error: tokenError } = await supabase
+    const { error: tokenError } = await adminSupabase
       .from("login_tokens")
       .insert({ user_id: userId, token });
 

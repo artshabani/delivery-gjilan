@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function DELETE(
   req: Request,
@@ -10,10 +8,10 @@ export async function DELETE(
   const { id } = await context.params;
 
   // delete items first
-  await supabase.from("restaurant_items").delete().eq("restaurant_id", id);
+  await adminSupabase.from("restaurant_items").delete().eq("restaurant_id", id);
 
   // delete restaurant
-  const { error } = await supabase.from("restaurants").delete().eq("id", id);
+  const { error } = await adminSupabase.from("restaurants").delete().eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 

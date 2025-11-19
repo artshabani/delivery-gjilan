@@ -29,6 +29,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
 
   const [selectedStores, setSelectedStores] = useState<number[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const parents: Category[] = categories.filter((c) => c.parent_id === null);
@@ -36,26 +37,41 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
 
   async function uploadImage(file: File) {
     setUploading(true);
+    setError(null);
 
-    const res = await fetch("/api/admin/products/sign-upload", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fileName: file.name,
-        fileType: file.type,
-      }),
-    });
+    try {
+      const res = await fetch("/api/admin/products/sign-upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileType: file.type,
+        }),
+      });
 
-    const { uploadUrl, publicUrl } = await res.json();
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to get upload URL");
+      }
 
-    await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": file.type },
-      body: file,
-    });
+      const { uploadUrl, publicUrl } = await res.json();
 
-    setForm((f) => ({ ...f, image_url: publicUrl }));
-    setUploading(false);
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("Failed to upload image to S3");
+      }
+
+      setForm((f) => ({ ...f, image_url: publicUrl }));
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
   }
 
   const create = async () => {
@@ -71,19 +87,32 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
       return;
     }
 
-    await fetch("/api/admin/products/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...form,
-        price: Number(form.price),
-        category_id: Number(form.category_id),
-        store_ids: selectedStores,
-        in_stock: true,
-      }),
-    });
+    setCreating(true);
 
-    onClose();
+    try {
+      const res = await fetch("/api/admin/products/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          price: Number(form.price),
+          category_id: Number(form.category_id),
+          store_ids: selectedStores,
+          in_stock: true,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to create product");
+      }
+
+      onClose();
+    } catch (err: any) {
+      setError(err.message || "Failed to create product");
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -155,13 +184,19 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
         </div>
 
         {/* IMAGE UPLOAD */}
-        <input
-          type="file"
-          className="text-gray-200"
-          onChange={(e) => {
-            if (e.target.files) uploadImage(e.target.files[0]);
-          }}
-        />
+        <div>
+          <input
+            type="file"
+            className="text-gray-200"
+            onChange={(e) => {
+              if (e.target.files) uploadImage(e.target.files[0]);
+            }}
+            disabled={uploading}
+          />
+          {uploading && (
+            <p className="text-sm text-gray-400 mt-1">Uploading image...</p>
+          )}
+        </div>
 
         {form.image_url && (
           <img
@@ -175,14 +210,18 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
 
         {/* ADD BUTTON */}
         <button
-          className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded disabled:opacity-50"
+          className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={create}
-          disabled={uploading}
+          disabled={uploading || creating}
         >
-          {uploading ? "Uploading..." : "Add Product"}
+          {creating ? "Creating..." : uploading ? "Uploading..." : "Add Product"}
         </button>
 
-        <button className="w-full text-gray-300 py-2" onClick={onClose}>
+        <button
+          className="w-full text-gray-300 py-2 disabled:opacity-50"
+          onClick={onClose}
+          disabled={uploading || creating}
+        >
           Cancel
         </button>
 

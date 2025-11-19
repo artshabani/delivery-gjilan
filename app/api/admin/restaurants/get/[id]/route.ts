@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function GET(
   req: Request,
@@ -9,7 +7,7 @@ export async function GET(
 ) {
   const { id } = await context.params;
 
-  const { data, error } = await supabase
+  const { data, error } = await adminSupabase
     .from("restaurants")
     .select("*")
     .eq("id", id)

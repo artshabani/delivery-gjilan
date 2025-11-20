@@ -70,6 +70,28 @@ export default function AdminProductsPage() {
   return (
     <div className="p-6 max-w-5xl mx-auto min-h-screen bg-gray-900 text-gray-200">
 
+      {/* NAVIGATION BUTTONS */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <a
+          href="/admin/users"
+          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm transition"
+        >
+          👥 Users Dashboard
+        </a>
+        <a
+          href="/products"
+          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded text-sm transition"
+        >
+          🛒 Customer Products Page
+        </a>
+        <a
+          href="/admin/orders"
+          className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition"
+        >
+          📦 Orders Dashboard
+        </a>
+      </div>
+
       <div className="flex justify-between mb-6">
         <h1 className="text-3xl font-bold">Products</h1>
 

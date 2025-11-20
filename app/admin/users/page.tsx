@@ -174,6 +174,22 @@ export default function AdminUsers() {
   // -------------------------------------------
   return (
     <div className="p-5 max-w-5xl mx-auto">
+      {/* NAVIGATION BUTTONS */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <a
+          href="/admin/products"
+          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded text-sm transition"
+        >
+          🛒 Products Dashboard
+        </a>
+        <a
+          href="/admin/orders"
+          className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition"
+        >
+          📦 Orders Dashboard
+        </a>
+      </div>
+
       <h1 className="text-3xl font-bold mb-6">Admin — Users</h1>
 
       {/* CREATE USER */}

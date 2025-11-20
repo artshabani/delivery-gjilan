@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function AuthClient() {
   const router = useRouter();
@@ -27,7 +28,18 @@ export default function AuthClient() {
 
       localStorage.setItem("dg_user_id", data.userId);
 
-      router.push("/");
+      // Check if user is admin and redirect accordingly
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("is_admin")
+        .eq("id", data.userId)
+        .single();
+
+      if (profile?.is_admin === true) {
+        router.push("/admin/products");
+      } else {
+        router.push("/");
+      }
     };
 
     login();

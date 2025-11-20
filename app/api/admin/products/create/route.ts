@@ -4,8 +4,8 @@ import { adminSupabase } from "@/lib/supabase-admin";
 export async function POST(req: Request) {
   const body = await req.json();
 
-  // 1. Destructure all expected fields, including the new store_ids
-  const { name, price, category_id, image_url, store_ids, in_stock = true } = body;
+  // 1. Destructure all expected fields, including the new store_ids and store_costs
+  const { name, price, category_id, image_url, store_ids, store_costs, in_stock = true } = body;
 
   // 2. Validation: Ensure required fields (including store_ids) are present
   if (!name || !price || !category_id || !store_ids || store_ids.length === 0) {
@@ -52,7 +52,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Product created but failed to link to stores." }, { status: 400 });
     }
 
-    // 6. Success
+    // 6. INSERT wholesale prices into product_store_costs
+    if (store_costs && Array.isArray(store_costs) && store_costs.length > 0) {
+      const costsPayload = store_costs.map((cost: { store_id: number; wholesale_price: number }) => ({
+        product_id: newProductId,
+        store_id: cost.store_id,
+        wholesale_price: cost.wholesale_price,
+      }));
+
+      const { error: costsError } = await adminSupabase
+        .from("product_store_costs")
+        .insert(costsPayload);
+
+      if (costsError) {
+        console.error("Costs Insert Error:", costsError);
+        // Don't fail the request, but log the error
+        // The product and links are already created
+      }
+    }
+
+    // 7. Success
     return NextResponse.json({ success: true, product_id: newProductId });
     
   } catch (e) {

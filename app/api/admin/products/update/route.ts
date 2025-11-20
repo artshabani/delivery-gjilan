@@ -4,8 +4,8 @@ import { adminSupabase } from "@/lib/supabase-admin";
 export async function POST(req: Request) {
   const body = await req.json();
 
-  // Destructure product fields, NOW INCLUDING the optional sale_price
-  const { id, name, price, category_id, image_url, in_stock, sale_price, store_ids } = body;
+  // Destructure product fields, NOW INCLUDING the optional sale_price and store_costs
+  const { id, name, price, category_id, image_url, in_stock, sale_price, store_ids, store_costs } = body;
 
   // Validation: Ensure required fields are present (sale_price is optional)
   if (!id || !name || !price || !category_id || !store_ids) {
@@ -67,7 +67,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Product updated but failed to set new store links." }, { status: 400 });
     }
 
-    // 4. Success
+    // 4. UPDATE wholesale prices in product_store_costs
+    if (store_costs && Array.isArray(store_costs) && store_costs.length > 0) {
+      // Delete existing costs for this product
+      await adminSupabase
+        .from("product_store_costs")
+        .delete()
+        .eq("product_id", id);
+
+      // Insert new costs
+      const costsPayload = store_costs.map((cost: { store_id: number; wholesale_price: number }) => ({
+        product_id: id,
+        store_id: cost.store_id,
+        wholesale_price: cost.wholesale_price,
+      }));
+
+      const { error: costsError } = await adminSupabase
+        .from("product_store_costs")
+        .insert(costsPayload);
+
+      if (costsError) {
+        console.error("Costs Update Error:", costsError);
+        // Don't fail the request, but log the error
+      }
+    }
+
+    // 5. Success
     return NextResponse.json({ success: true, product_id: id });
     
   } catch (e) {

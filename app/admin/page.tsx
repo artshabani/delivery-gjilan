@@ -37,6 +37,22 @@ export default function AdminHomePage() {
           🍔 Restaurant Menu Items
         </Link>
 
+        <Link
+          href="/admin/store-planning"
+          className="p-4 border rounded-lg bg-gray-900 hover:bg-gray-800 transition text-white"
+        >
+          🗺️ Store Planning Test
+        </Link>
+
+        <a
+          href="/api/admin/stores/diagnostic"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-4 border rounded-lg bg-gray-900 hover:bg-gray-800 transition text-white"
+        >
+          🔍 Store Diagnostic (JSON)
+        </a>
+
       </div>
     </div>
   );

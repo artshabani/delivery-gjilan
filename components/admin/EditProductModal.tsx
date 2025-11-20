@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface Category {
   id: number;
@@ -46,10 +47,35 @@ export default function EditProductModal({
   const [selectedStores, setSelectedStores] = useState<number[]>(
     product.store_ids || []
   );
-
+  const [wholesalePrices, setWholesalePrices] = useState<Record<number, string>>({});
+  const [loadingPrices, setLoadingPrices] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load existing wholesale prices
+  useEffect(() => {
+    const loadWholesalePrices = async () => {
+      if (!product.id) return;
+
+      setLoadingPrices(true);
+      const { data: costs, error: costsError } = await supabase
+        .from("product_store_costs")
+        .select("store_id, wholesale_price")
+        .eq("product_id", product.id);
+
+      if (!costsError && costs) {
+        const pricesMap: Record<number, string> = {};
+        costs.forEach((cost) => {
+          pricesMap[cost.store_id] = String(cost.wholesale_price);
+        });
+        setWholesalePrices(pricesMap);
+      }
+      setLoadingPrices(false);
+    };
+
+    loadWholesalePrices();
+  }, [product.id]);
 
   /* ---------- CATEGORY GROUPS ---------- */
   const parents: Category[] = categories.filter(
@@ -103,9 +129,31 @@ export default function EditProductModal({
   /* ---------- SAVE ---------- */
   const save = async () => {
     setError(null);
+
+    // Validate wholesale prices for all selected stores
+    const missingPrices: string[] = [];
+    selectedStores.forEach((storeId) => {
+      const price = wholesalePrices[storeId];
+      if (!price || price === "" || Number(price) <= 0) {
+        const storeName = stores.find((s) => s.id === storeId)?.name || `Store ${storeId}`;
+        missingPrices.push(storeName);
+      }
+    });
+
+    if (missingPrices.length > 0) {
+      setError(`Please enter wholesale price for: ${missingPrices.join(", ")}`);
+      return;
+    }
+
     setSaving(true);
 
     try {
+      // Prepare wholesale prices array
+      const storeCosts = selectedStores.map((storeId) => ({
+        store_id: storeId,
+        wholesale_price: Number(wholesalePrices[storeId]),
+      }));
+
       const res = await fetch("/api/admin/products/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -115,6 +163,7 @@ export default function EditProductModal({
           price: Number(form.price),
           category_id: Number(form.category_id),
           store_ids: selectedStores,
+          store_costs: storeCosts,
         }),
       });
 
@@ -134,7 +183,7 @@ export default function EditProductModal({
   /* ---------- UI ---------- */
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-gray-800 text-gray-100 p-6 rounded-lg w-96 shadow-xl border border-gray-700 space-y-4">
+      <div className="bg-gray-800 text-gray-100 p-6 rounded-lg w-[500px] max-h-[90vh] overflow-y-auto shadow-xl border border-gray-700 space-y-4">
 
         <h2 className="text-xl font-semibold">Edit Product</h2>
 
@@ -178,24 +227,65 @@ export default function EditProductModal({
 
         {/* STORES */}
         <div>
-          <p className="text-sm mb-1">Available in stores:</p>
+          <p className="text-sm mb-2 font-semibold">Available in stores:</p>
 
-          {stores.map((s: Store) => (
-            <label key={s.id} className="flex items-center gap-2 mb-1">
-              <input
-                type="checkbox"
-                checked={selectedStores.includes(s.id)}
-                onChange={(e) =>
-                  e.target.checked
-                    ? setSelectedStores([...selectedStores, s.id])
-                    : setSelectedStores(
-                        selectedStores.filter((x) => x !== s.id)
-                      )
-                }
-              />
-              {s.name}
-            </label>
-          ))}
+          {loadingPrices && (
+            <p className="text-xs text-gray-400 mb-2">Loading prices...</p>
+          )}
+
+          {stores.map((s: Store) => {
+            const isSelected = selectedStores.includes(s.id);
+            return (
+              <div key={s.id} className="mb-3 p-2 bg-gray-700/50 rounded">
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedStores([...selectedStores, s.id]);
+                        // Initialize wholesale price if not set
+                        if (!wholesalePrices[s.id]) {
+                          setWholesalePrices({
+                            ...wholesalePrices,
+                            [s.id]: "",
+                          });
+                        }
+                      } else {
+                        setSelectedStores(
+                          selectedStores.filter((x) => x !== s.id)
+                        );
+                        // Keep the price in state but it won't be saved
+                      }
+                    }}
+                  />
+                  <span className="font-medium">{s.name}</span>
+                </label>
+                
+                {isSelected && (
+                  <div className="ml-6">
+                    <label className="text-xs text-gray-400 block mb-1">
+                      Wholesale Price (€)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full p-1.5 bg-gray-800 border border-gray-600 rounded text-sm"
+                      placeholder="0.00"
+                      value={wholesalePrices[s.id] || ""}
+                      onChange={(e) => {
+                        setWholesalePrices({
+                          ...wholesalePrices,
+                          [s.id]: e.target.value,
+                        });
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* IMAGE UPLOAD */}

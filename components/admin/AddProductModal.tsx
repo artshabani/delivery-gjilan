@@ -28,6 +28,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
   });
 
   const [selectedStores, setSelectedStores] = useState<number[]>([]);
+  const [wholesalePrices, setWholesalePrices] = useState<Record<number, string>>({});
   const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,9 +88,30 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
       return;
     }
 
+    // Validate wholesale prices for all selected stores
+    const missingPrices: string[] = [];
+    selectedStores.forEach((storeId) => {
+      const price = wholesalePrices[storeId];
+      if (!price || price === "" || Number(price) <= 0) {
+        const storeName = stores.find((s) => s.id === storeId)?.name || `Store ${storeId}`;
+        missingPrices.push(storeName);
+      }
+    });
+
+    if (missingPrices.length > 0) {
+      setError(`Please enter wholesale price for: ${missingPrices.join(", ")}`);
+      return;
+    }
+
     setCreating(true);
 
     try {
+      // Prepare wholesale prices array
+      const storeCosts = selectedStores.map((storeId) => ({
+        store_id: storeId,
+        wholesale_price: Number(wholesalePrices[storeId]),
+      }));
+
       const res = await fetch("/api/admin/products/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -98,6 +120,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
           price: Number(form.price),
           category_id: Number(form.category_id),
           store_ids: selectedStores,
+          store_costs: storeCosts,
           in_stock: true,
         }),
       });
@@ -117,7 +140,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-gray-800 text-gray-100 p-6 rounded-lg shadow-xl w-96 space-y-4 border border-gray-700">
+      <div className="bg-gray-800 text-gray-100 p-6 rounded-lg shadow-xl w-[500px] max-h-[90vh] overflow-y-auto space-y-4 border border-gray-700">
 
         <h2 className="text-xl font-semibold">Add Product</h2>
 
@@ -163,24 +186,62 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
         <div className="pt-2 border-t border-gray-700">
           <p className="text-sm font-semibold mb-2">Available in Stores</p>
 
-          {stores.map((store: Store) => (
-            <label key={store.id} className="flex items-center gap-2 mb-1">
-              <input
-                type="checkbox"
-                checked={selectedStores.includes(store.id)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedStores([...selectedStores, store.id]);
-                  } else {
-                    setSelectedStores(
-                      selectedStores.filter((id) => id !== store.id)
-                    );
-                  }
-                }}
-              />
-              {store.name}
-            </label>
-          ))}
+          {stores.map((store: Store) => {
+            const isSelected = selectedStores.includes(store.id);
+            return (
+              <div key={store.id} className="mb-3 p-2 bg-gray-700/50 rounded">
+                <label className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedStores([...selectedStores, store.id]);
+                        // Initialize wholesale price if not set
+                        if (!wholesalePrices[store.id]) {
+                          setWholesalePrices({
+                            ...wholesalePrices,
+                            [store.id]: "",
+                          });
+                        }
+                      } else {
+                        setSelectedStores(
+                          selectedStores.filter((id) => id !== store.id)
+                        );
+                        // Remove wholesale price when store is deselected
+                        const newPrices = { ...wholesalePrices };
+                        delete newPrices[store.id];
+                        setWholesalePrices(newPrices);
+                      }
+                    }}
+                  />
+                  <span className="font-medium">{store.name}</span>
+                </label>
+                
+                {isSelected && (
+                  <div className="ml-6">
+                    <label className="text-xs text-gray-400 block mb-1">
+                      Wholesale Price (€)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="w-full p-1.5 bg-gray-800 border border-gray-600 rounded text-sm"
+                      placeholder="0.00"
+                      value={wholesalePrices[store.id] || ""}
+                      onChange={(e) => {
+                        setWholesalePrices({
+                          ...wholesalePrices,
+                          [store.id]: e.target.value,
+                        });
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* IMAGE UPLOAD */}

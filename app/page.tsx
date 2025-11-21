@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ShoppingBag, Utensils, Shield } from "lucide-react";
+import { ShoppingBag, Utensils, Shield, Clock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAdminGuard } from "@/app/hooks/useAdminGuard"
 
@@ -95,6 +95,29 @@ export default function Home() {
             <div className="flex flex-col">
               <p className="text-xl font-semibold text-white">Food</p>
               <p className="text-sm text-blue-200/70">Restaurants & fast food</p>
+            </div>
+          </motion.div>
+        </Link>
+
+        {/* ORDER HISTORY */}
+        <Link href="/orders">
+          <motion.div
+            whileTap={{ scale: 0.97 }}
+            className="
+              w-full p-6 rounded-2xl border cursor-pointer 
+              flex items-center gap-4 transition-shadow
+              bg-gradient-to-r from-amber-600/60 to-amber-800/60
+              backdrop-blur-xl shadow-lg border-amber-300/20
+              hover:shadow-amber-500/40
+            "
+          >
+            <div className="w-14 h-14 bg-black/30 rounded-xl flex items-center justify-center">
+              <Clock size={32} className="text-amber-200" />
+            </div>
+
+            <div className="flex flex-col">
+              <p className="text-xl font-semibold text-white">Your Orders</p>
+              <p className="text-sm text-amber-200/70">Track active & past orders</p>
             </div>
           </motion.div>
         </Link>

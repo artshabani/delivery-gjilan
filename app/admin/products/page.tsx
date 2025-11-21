@@ -71,30 +71,41 @@ export default function AdminProductsPage() {
     <div className="min-h-screen w-full bg-gradient-to-b from-slate-950 via-slate-900 to-black text-gray-200 p-6 sm:p-8">
 
       {/* NAVIGATION BUTTONS */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         <a
           href="/admin/users"
-          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-sm transition"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-blue-500/50 hover:scale-105"
         >
-          👥 Users Dashboard
+          <span className="text-xl">👥</span>
+          <span>Users</span>
         </a>
         <a
           href="/admin/orders"
-          className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-green-500/50 hover:scale-105"
         >
-          📦 Orders Dashboard
+          <span className="text-xl">📦</span>
+          <span>Orders</span>
         </a>
         <a
           href="/admin/restaurants"
-          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm transition"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-indigo-500/50 hover:scale-105"
         >
-          🍽️ Restaurants Dashboard
+          <span className="text-xl">🍽️</span>
+          <span>Restaurants</span>
+        </a>
+        <a
+          href="/admin/analytics"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-cyan-600 to-cyan-700 hover:from-cyan-500 hover:to-cyan-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-cyan-500/50 hover:scale-105"
+        >
+          <span className="text-xl">📊</span>
+          <span>Analytics</span>
         </a>
         <a
           href="/products"
-          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded text-sm transition"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-emerald-500/50 hover:scale-105"
         >
-          🛒 Customer Products Page
+          <span className="text-xl">🛍️</span>
+          <span>Shop</span>
         </a>
       </div>
 
@@ -142,7 +153,7 @@ export default function AdminProductsPage() {
                 {p.image_url ? (
                   <img
                     src={p.image_url}
-                  className="w-14 h-14 rounded object-cover"
+                    className="w-14 h-14 rounded object-cover"
                   />
                 ) : (
                   <div className="w-14 h-14 bg-gray-700 rounded" />
@@ -174,88 +185,88 @@ export default function AdminProductsPage() {
               </td>
 
               {/* SALE STATUS */}
-<td className="p-2 border border-gray-800">
-  {p.is_on_sale ? (
-    <span className="text-green-400 font-semibold">On Sale</span>
-  ) : (
-    <span className="text-gray-500">—</span>
-  )}
-</td>
+              <td className="p-2 border border-gray-800">
+                {p.is_on_sale ? (
+                  <span className="text-green-400 font-semibold">On Sale</span>
+                ) : (
+                  <span className="text-gray-500">—</span>
+                )}
+              </td>
 
-{/* ACTIONS */}
-<td className="p-2 border border-gray-800">
-  <div className="flex gap-2">
+              {/* ACTIONS */}
+              <td className="p-2 border border-gray-800">
+                <div className="flex gap-2">
 
-    {/* SALE BUTTON */}
-    {p.is_on_sale ? (
-      // REMOVE SALE instantly
-      <button
-        onClick={async () => {
-          await supabase
-            .from("products")
-            .update({
-              is_on_sale: false,
-              sale_price: null,
-            })
-            .eq("id", p.id);
+                  {/* SALE BUTTON */}
+                  {p.is_on_sale ? (
+                    // REMOVE SALE instantly
+                    <button
+                      onClick={async () => {
+                        await supabase
+                          .from("products")
+                          .update({
+                            is_on_sale: false,
+                            sale_price: null,
+                          })
+                          .eq("id", p.id);
 
-          load();
-        }}
-        className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded"
-      >
-        Remove Sale
-      </button>
-    ) : (
-      // OPEN SALE MODAL
-      <button
-        onClick={() => setShowSale(p)}
-        className="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 text-white rounded"
-      >
-        Sale
-      </button>
-    )}
+                        load();
+                      }}
+                      className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded"
+                    >
+                      Remove Sale
+                    </button>
+                  ) : (
+                    // OPEN SALE MODAL
+                    <button
+                      onClick={() => setShowSale(p)}
+                      className="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 text-white rounded"
+                    >
+                      Sale
+                    </button>
+                  )}
 
-    {/* EDIT BUTTON */}
-    <button
-      onClick={() => setShowEdit(p)}
-      className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded"
-    >
-      Edit
-    </button>
+                  {/* EDIT BUTTON */}
+                  <button
+                    onClick={() => setShowEdit(p)}
+                    className="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded"
+                  >
+                    Edit
+                  </button>
 
-    {/* DELETE */}
-   <button
-  onClick={async () => {
-    // 1. delete order items
-    await supabase
-      .from("order_items")
-      .delete()
-      .eq("product_id", p.id);
+                  {/* DELETE */}
+                  <button
+                    onClick={async () => {
+                      // 1. delete order items
+                      await supabase
+                        .from("order_items")
+                        .delete()
+                        .eq("product_id", p.id);
 
-    // 2. delete from the ACTUAL link table
-    await supabase
-      .from("product_store_links")
-      .delete()
-      .eq("product_id", p.id);
+                      // 2. delete from the ACTUAL link table
+                      await supabase
+                        .from("product_store_links")
+                        .delete()
+                        .eq("product_id", p.id);
 
-    // 3. delete product
-    await supabase
-      .from("products")
-      .delete()
-      .eq("id", p.id);
+                      // 3. delete product
+                      await supabase
+                        .from("products")
+                        .delete()
+                        .eq("id", p.id);
 
-    load();
-  }}
-  className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded"
->
-  Delete
-</button>
-
-
+                      load();
+                    }}
+                    className="px-2 py-1 bg-red-600 hover:bg-red-500 text-white rounded"
+                  >
+                    Delete
+                  </button>
 
 
-  </div>
-</td>
+
+
+                </div>
+              </td>
 
             </tr>
           ))}

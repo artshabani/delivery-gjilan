@@ -231,7 +231,7 @@ export default function ActiveOrderBanner() {
       if (remaining > 0) {
         return `${Math.max(1, Math.ceil(remaining / 60000))} min`;
       }
-      return "Arriving now";
+      return "Anytime";
     }
     return order.status.replace(/_/g, " ");
   })();
@@ -269,9 +269,8 @@ export default function ActiveOrderBanner() {
       <div className="fixed bottom-4 left-0 w-full flex justify-center z-40 px-4 pointer-events-none">
         <button
           onClick={() => setDetailsOpen(true)}
-          className={`w-full max-w-xl bg-gradient-to-r ${palette.bg} border border-white/20 rounded-2xl shadow-2xl p-4 flex items-center justify-between gap-3 pointer-events-auto transition ${
-            shake ? "shake" : ""
-          }`}
+          className={`w-full max-w-xl bg-gradient-to-r ${palette.bg} border border-white/20 rounded-2xl shadow-2xl p-4 flex items-center justify-between gap-3 pointer-events-auto transition ${shake ? "shake" : ""
+            }`}
         >
           <div>
             <p className="text-white font-semibold">Percjell porosine</p>

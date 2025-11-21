@@ -132,6 +132,29 @@ export default function AdminUsers() {
     setUsers((await reload.json()).users);
   };
 
+  // HISTORY MODAL STATE
+  const [historyUser, setHistoryUser] = useState<UserRow | null>(null);
+  const [historyOrders, setHistoryOrders] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // LOAD HISTORY
+  const loadHistory = async (user: UserRow) => {
+    setHistoryUser(user);
+    setHistoryLoading(true);
+    setHistoryOrders([]);
+
+    try {
+      const res = await fetch(`/api/admin/users/history?user_id=${user.id}`);
+      const data = await res.json();
+      if (data.orders) setHistoryOrders(data.orders);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to load history");
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   // -------------------------------------------
   // ACCESS CONTROL
   // -------------------------------------------
@@ -153,35 +176,51 @@ export default function AdminUsers() {
   // RENDER ADMIN PAGE (DARK MODE)
   // -------------------------------------------
   return (
-<div className="min-h-screen bg-black text-gray-200 p-5 w-full">
+    <div className="min-h-screen bg-black text-gray-200 p-5 w-full">
 
       {/* NAVIGATION BUTTONS */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         <a
           href="/admin/products"
-          className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white rounded text-sm transition"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-purple-500/50 hover:scale-105"
         >
-          🛒 Products Dashboard
+          <span className="text-xl">🛒</span>
+          <span>Products</span>
         </a>
-
         <a
           href="/admin/orders"
-          className="px-3 py-1.5 bg-green-700 hover:bg-green-600 text-white rounded text-sm transition"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-green-500/50 hover:scale-105"
         >
-          📦 Orders Dashboard
+          <span className="text-xl">📦</span>
+          <span>Orders</span>
         </a>
         <a
           href="/admin/restaurants"
-          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm transition"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-indigo-500/50 hover:scale-105"
         >
-          🍽️ Restaurants Dashboard
+          <span className="text-xl">🍽️</span>
+          <span>Restaurants</span>
+        </a>
+        <a
+          href="/admin/analytics"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-cyan-600 to-cyan-700 hover:from-cyan-500 hover:to-cyan-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-cyan-500/50 hover:scale-105"
+        >
+          <span className="text-xl">📊</span>
+          <span>Analytics</span>
+        </a>
+        <a
+          href="/products"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-emerald-500/50 hover:scale-105"
+        >
+          <span className="text-xl">🛍️</span>
+          <span>Shop</span>
         </a>
       </div>
 
       <h1 className="text-3xl font-bold mb-6 text-white">Admin — Users</h1>
 
       {/* CREATE USER */}
-<div className="border border-gray-700 p-6 rounded-lg bg-gray-900/80 shadow mb-8 space-y-3 w-full">
+      <div className="border border-gray-700 p-6 rounded-lg bg-gray-900/80 shadow mb-8 space-y-3 w-full">
         <h2 className="text-xl font-semibold mb-3 text-white">Create User</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -259,7 +298,7 @@ export default function AdminUsers() {
       </div>
 
       {/* USERS TABLE */}
-<div className="bg-gray-900/70 border border-gray-700 shadow rounded-lg overflow-hidden w-full">
+      <div className="bg-gray-900/70 border border-gray-700 shadow rounded-lg overflow-hidden w-full">
         <table className="w-full text-left border-collapse">
           <thead className="bg-gray-800 text-gray-300 uppercase text-sm">
             <tr>
@@ -286,9 +325,8 @@ export default function AdminUsers() {
               .map((u, i) => (
                 <tr
                   key={u.id}
-                  className={`border-t border-gray-700 ${
-                    i % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
-                  } hover:bg-gray-700 transition`}
+                  className={`border-t border-gray-700 ${i % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
+                    } hover:bg-gray-700 transition`}
                 >
                   <td className="p-3">{u.email}</td>
                   <td className="p-3">
@@ -304,6 +342,12 @@ export default function AdminUsers() {
                         className="px-2 py-1 bg-blue-700 hover:bg-blue-600 text-white rounded text-sm"
                       >
                         QR
+                      </button>
+                      <button
+                        onClick={() => loadHistory(u)}
+                        className="px-2 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-sm"
+                      >
+                        History
                       </button>
                       <button
                         onClick={() => {
@@ -334,7 +378,7 @@ export default function AdminUsers() {
 
       {/* EDIT MODAL */}
       {editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
           <div className="bg-gray-900 border border-gray-700 p-6 rounded-lg shadow-lg w-96 space-y-4 text-gray-200">
             <h3 className="text-lg font-semibold text-white">Edit User</h3>
 
@@ -377,6 +421,87 @@ export default function AdminUsers() {
                 className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded w-full"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HISTORY MODAL */}
+      {historyUser && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+
+            {/* Header */}
+            <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-white">Order History</h3>
+                <p className="text-sm text-gray-400">
+                  {historyUser.first_name} {historyUser.last_name} ({historyUser.email})
+                </p>
+              </div>
+              <button
+                onClick={() => setHistoryUser(null)}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {historyLoading ? (
+                <div className="text-center py-10 text-gray-400">Loading history...</div>
+              ) : historyOrders.length === 0 ? (
+                <div className="text-center py-10 text-gray-500">No orders found for this user.</div>
+              ) : (
+                historyOrders.map((order) => (
+                  <div key={order.id} className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <div className="text-sm text-gray-400">
+                          {new Date(order.created_at).toLocaleString()}
+                        </div>
+                        <div className={`inline-block px-2 py-0.5 rounded text-xs font-bold mt-1 uppercase ${order.status === 'delivered' ? 'bg-green-900 text-green-300' :
+                          order.status === 'canceled' ? 'bg-red-900 text-red-300' :
+                            'bg-blue-900 text-blue-300'
+                          }`}>
+                          {order.status.replace(/_/g, ' ')}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-white">€{order.total?.toFixed(2)}</div>
+                        <div className="text-xs text-gray-500">{order.order_items.length} items</div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 border-t border-gray-700/50 pt-3">
+                      {order.order_items.map((item: any) => {
+                        const product = item.product || item.restaurant_item;
+                        return (
+                          <div key={item.id} className="flex justify-between text-sm">
+                            <span className="text-gray-300">
+                              {item.quantity}x {product?.name || "Unknown"}
+                            </span>
+                            <span className="text-gray-400">
+                              €{(item.price * item.quantity).toFixed(2)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-700 bg-gray-900 rounded-b-xl">
+              <button
+                onClick={() => setHistoryUser(null)}
+                className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-semibold transition"
+              >
+                Close
               </button>
             </div>
           </div>

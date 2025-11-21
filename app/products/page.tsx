@@ -117,8 +117,8 @@ export default function ProductsPage() {
   const currentCategoryId =
     activeLevel1 === 0
       ? subCats.find((c) => c.id === activeLevel2)?.parent_id ??
-        level1Cats[0]?.id ??
-        null
+      level1Cats[0]?.id ??
+      null
       : activeLevel1;
 
   const currentLevel2Tabs = currentCategoryId
@@ -215,21 +215,20 @@ export default function ProductsPage() {
     <div className="min-h-screen w-full bg-black text-white pb-28">
 
       {/* NAVIGATION */}
-      <div className="sticky top-0 z-50 bg-black/90 backdrop-blur-md px-3 pt-3 pb-3 shadow-lg">
+      <div className="sticky top-0 z-50 bg-gradient-to-b from-slate-950 via-slate-900 to-black/95 backdrop-blur-xl px-4 pt-4 pb-4 shadow-2xl border-b border-white/10">
 
-        {/* LEVEL 1 */}
-        <div className="flex gap-2 py-1 overflow-x-auto scrollbar-hide md:flex-wrap">
+        {/* LEVEL 1 - Main Categories */}
+        <div className="flex gap-3 py-2 overflow-x-auto scrollbar-hide md:flex-wrap">
           <button
             onClick={() => {
               setActiveLevel1(0);
               setActiveLevel2(0);
               window.scrollTo({ top: 0, behavior: "auto" });
             }}
-            className={`px-3 py-1.5 rounded-full text-xs md:text-sm whitespace-nowrap ${
-              activeLevel1 === 0
-                ? "bg-purple-600 text-white"
-                : "bg-white/10 text-white/60"
-            }`}
+            className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all shadow-lg ${activeLevel1 === 0
+                ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-purple-500/50 scale-105"
+                : "bg-slate-800/60 text-white/70 hover:bg-slate-700/60 hover:text-white"
+              }`}
           >
             All products
           </button>
@@ -241,35 +240,32 @@ export default function ProductsPage() {
                 setActiveLevel1(cat.id);
                 scrollToFirstSubOfCategory(cat.id);
               }}
-              className={`px-3 py-1.5 rounded-full text-xs md:text-sm whitespace-nowrap ${
-                activeLevel1 === cat.id
-                  ? "bg-purple-600 text-white"
-                  : "bg-white/10 text-white/60"
-              }`}
+              className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all shadow-lg ${activeLevel1 === cat.id
+                  ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-purple-500/50 scale-105"
+                  : "bg-slate-800/60 text-white/70 hover:bg-slate-700/60 hover:text-white"
+                }`}
             >
               {cat.name}
             </button>
           ))}
         </div>
 
-        {/* LEVEL 2 */}
-        <div className="overflow-x-auto scrollbar-hide mt-1 md:overflow-visible">
-          <div className="flex gap-4 px-1 md:flex-wrap">
+        {/* LEVEL 2 - Subcategories */}
+        <div className="overflow-x-auto scrollbar-hide mt-3 md:overflow-visible">
+          <div className="flex gap-6 px-1 md:flex-wrap">
             {currentLevel2Tabs.map((sub) => (
               <button
                 key={sub.id}
                 onClick={() => scrollToSubcategory(sub.id)}
-                className={`relative text-xs md:text-sm whitespace-nowrap ${
-                  activeLevel2 === sub.id
-                    ? "text-purple-300 font-semibold"
-                    : "text-white/60"
-                }`}
+                className={`relative text-sm font-medium whitespace-nowrap pb-2 transition-all ${activeLevel2 === sub.id
+                    ? "text-purple-400 font-bold"
+                    : "text-white/60 hover:text-white/90"
+                  }`}
               >
                 {sub.name}
                 <span
-                  className={`absolute bottom-0 left-0 h-[2px] w-full bg-purple-500 rounded-full transition-transform duration-300 ${
-                    activeLevel2 === sub.id ? "scale-x-100" : "scale-x-0"
-                  }`}
+                  className={`absolute bottom-0 left-0 h-[3px] w-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-transform duration-300 ${activeLevel2 === sub.id ? "scale-x-100" : "scale-x-0"
+                    }`}
                 />
               </button>
             ))}
@@ -277,12 +273,12 @@ export default function ProductsPage() {
         </div>
 
         {/* SEARCH */}
-        <div className="w-full flex justify-center mt-2">
+        <div className="w-full flex justify-center mt-4">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search…"
-            className="w-[65%] sm:w-[50%] px-3 py-2 text-sm rounded-xl bg-white/10 text-white placeholder-white/40 border border-purple-500/40 focus:border-purple-500/70 focus:bg-white/5 transition"
+            placeholder="Search products..."
+            className="w-full max-w-md px-4 py-3 text-sm rounded-xl bg-slate-800/60 text-white placeholder-white/50 border border-purple-500/30 focus:border-purple-500 focus:bg-slate-800/80 focus:ring-2 focus:ring-purple-500/20 transition-all outline-none"
           />
         </div>
       </div>

@@ -40,11 +40,10 @@ export default function AdminHomePage() {
         <button
           onClick={toggleClosed}
           disabled={busy}
-          className={`w-full mb-4 rounded-lg px-4 py-3 font-semibold text-white shadow ${
-            closed
+          className={`w-full mb-4 rounded-lg px-4 py-3 font-semibold text-white shadow ${closed
               ? "bg-red-600 hover:bg-red-700"
               : "bg-emerald-600 hover:bg-emerald-700"
-          }`}
+            }`}
         >
           {busy ? "Saving..." : closed ? "Open the store" : "Close the store"}
         </button>
@@ -69,7 +68,7 @@ export default function AdminHomePage() {
             🍽️ Restaurants
           </Link>
 
-           <Link
+          <Link
             href="/admin/orders"
             className="p-4 border border-gray-700 rounded-lg bg-gray-900/80
                        hover:bg-gray-800 hover:border-blue-400 transition 
@@ -84,6 +83,15 @@ export default function AdminHomePage() {
                        text-white text-lg"
           >
             Users
+          </Link>
+
+          <Link
+            href="/admin/analytics"
+            className="p-4 border border-gray-700 rounded-lg bg-gray-900/80
+                       hover:bg-gray-800 hover:border-cyan-400 transition 
+                       text-white text-lg"
+          >
+            📊 Analytics
           </Link>
 
 

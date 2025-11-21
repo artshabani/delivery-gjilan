@@ -7,12 +7,14 @@ import { Category } from "@/types/category";
 import { Product } from "@/types/product";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { fetchAvailableProducts } from "@/lib/productFetch"; // 👈 NEW IMPORT
+import { fetchAvailableProducts } from "@/lib/productFetch";
 
 export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [activeLevel1, setActiveLevel1] = useState(0);
   const [activeLevel2, setActiveLevel2] = useState(0);
@@ -25,62 +27,72 @@ export default function ProductsPage() {
   const sectionRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
+  /* ---------------- WAIT FOR USER ID ---------------- */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const uid = localStorage.getItem("dg_user_id");
+      if (uid) {
+        setUserId(uid);
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   /* ---------------- CHECK ADMIN ---------------- */
   useEffect(() => {
-    async function checkAdmin() {
-      const uid = localStorage.getItem("dg_user_id");
-      if (!uid) return;
+    if (!userId) return;
 
+    async function checkAdmin() {
       const { data } = await supabase
         .from("user_profiles")
         .select("is_admin")
-        .eq("id", uid)
+        .eq("id", userId)
         .single();
 
       setIsAdmin(data?.is_admin === true);
     }
 
     checkAdmin();
-  }, []);
+  }, [userId]);
 
-  /* ---------------- FETCH DATA (MODIFIED) ---------------- */
+  /* ---------------- FETCH PRODUCTS & CATEGORIES ---------------- */
   useEffect(() => {
+    if (!userId) return; // wait for userId
+
     const load = async () => {
-      // Fetch ALL Categories (no change needed here)
       const { data: catData } = await supabase
         .from("product_categories")
         .select("*")
         .order("sort_order");
 
-      // 💥 MODIFICATION: Fetch only products from currently open stores
       const prodData = await fetchAvailableProducts();
 
       setCategories(catData || []);
-      setProducts(prodData || []); // Use the filtered data
+      setProducts(prodData || []);
       setLoading(false);
     };
 
     load();
-    
-    // Optional: Add real-time listener for store status changes (highly recommended)
+
     const storeStatusChannel = supabase
-        .channel("store_status_changes")
-        .on(
-            "postgres_changes",
-            {
-                event: "UPDATE",
-                schema: "public",
-                table: "stores",
-            },
-            () => load() // Reload products when a store opens/closes
-        )
-        .subscribe();
+      .channel("store_status_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "stores",
+        },
+        () => load()
+      )
+      .subscribe();
 
     return () => {
-        supabase.removeChannel(storeStatusChannel);
+      supabase.removeChannel(storeStatusChannel);
     };
-
-  }, []); // Dependency array is empty, runs once on mount
+  }, [userId]);
 
   /* ---------------- CATEGORY LOGIC ---------------- */
   const level1Cats = categories.filter((c) => c.parent_id === null);
@@ -93,8 +105,7 @@ export default function ProductsPage() {
           return (a.parent_id ?? 0) - (b.parent_id ?? 0);
         if (a.sort_order !== b.sort_order)
           return (a.sort_order ?? 0) - (b.sort_order ?? 0);
-        // Note: Casting to number might be needed if a.id is string/BigInt, but looks fine here
-        return (a.id as number) - (b.id as number); 
+        return (a.id as number) - (b.id as number);
       }),
     [subCatsRaw]
   );
@@ -122,10 +133,7 @@ export default function ProductsPage() {
       (entries) => {
         const visible = entries
           .filter((e) => e.isIntersecting)
-          .sort(
-            (a, b) =>
-              a.boundingClientRect.top - b.boundingClientRect.top
-          )[0];
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
 
         if (!visible) return;
 
@@ -187,6 +195,14 @@ export default function ProductsPage() {
   };
 
   /* ---------------- LOADING ---------------- */
+  if (!userId) {
+    return (
+      <div className="min-h-screen bg-black text-white p-4">
+        Preparing your session…
+      </div>
+    );
+  }
+
   if (loading)
     return (
       <div className="min-h-screen bg-black text-white p-4">
@@ -196,10 +212,9 @@ export default function ProductsPage() {
 
   /* ---------------- RENDER ---------------- */
   return (
-    // ... rest of the render function is unchanged
     <div className="min-h-screen w-full bg-black text-white pb-28">
 
-      {/* ---------------- NAVIGATION ---------------- */}
+      {/* NAVIGATION */}
       <div className="sticky top-0 z-50 bg-black/90 backdrop-blur-md px-3 pt-3 pb-3 shadow-lg">
 
         {/* LEVEL 1 */}
@@ -244,7 +259,7 @@ export default function ProductsPage() {
               <button
                 key={sub.id}
                 onClick={() => scrollToSubcategory(sub.id)}
-                className={`relative  text-xs md:text-sm whitespace-nowrap ${
+                className={`relative text-xs md:text-sm whitespace-nowrap ${
                   activeLevel2 === sub.id
                     ? "text-purple-300 font-semibold"
                     : "text-white/60"
@@ -272,9 +287,8 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* ---------------- ADMIN / USER ---------------- */}
+      {/* ADMIN / USER */}
       <div className="flex justify-center gap-3 mt-3">
-
         {isAdmin ? (
           <>
             <Link
@@ -294,24 +308,20 @@ export default function ProductsPage() {
         ) : (
           <Link
             href="/restaurants"
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 
-                       text-white text-sm font-semibold shadow-md hover:shadow-xl 
-                       active:scale-95 transition"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 text-white text-sm font-semibold shadow-md hover:shadow-xl active:scale-95 transition"
           >
             Browse Restaurants
           </Link>
         )}
-
       </div>
 
-      {/* ---------------- MAIN CONTENT ---------------- */}
+      {/* MAIN CONTENT */}
       <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-5 md:px-6 lg:px-8 mt-4">
         {visibleSubCats.map((sub) => {
           const subProducts = filterProducts(
             products.filter((p) => p.category_id === sub.id)
           );
 
-          // NOTE: If the entire list of products is empty, the no-store message will show.
           if (!subProducts.length) return null;
 
           return (
@@ -319,9 +329,7 @@ export default function ProductsPage() {
               key={sub.id}
               data-subcat={sub.id}
               data-parent={sub.parent_id ?? 0}
-              ref={(el) => {
-                sectionRefs.current[sub.id] = el;
-              }}
+              ref={(el) => (sectionRefs.current[sub.id] = el)}
               className="mb-10"
             >
               <h2 className="text-xl font-semibold mb-3">{sub.name}</h2>
@@ -331,7 +339,9 @@ export default function ProductsPage() {
                 animate="visible"
                 variants={{
                   hidden: {},
-                  visible: { transition: { staggerChildren: 0.06 } },
+                  visible: {
+                    transition: { staggerChildren: 0.06 },
+                  },
                 }}
                 className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
               >
@@ -362,6 +372,5 @@ export default function ProductsPage() {
         <div ref={sentinelRef} className="h-10" />
       </div>
     </div>
-    // ... end of render function
   );
 }

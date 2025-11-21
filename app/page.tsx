@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { ShoppingBag, Utensils, Shield } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAdminGuard } from "@/app/hooks/useAdminGuard"
-import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 
 export default function Home() {
   const [name, setName] = useState<string | null>(null);
@@ -129,7 +128,6 @@ export default function Home() {
         )}
 
       </div>
-      <ActiveOrderBanner />
     </div>
   );
 }

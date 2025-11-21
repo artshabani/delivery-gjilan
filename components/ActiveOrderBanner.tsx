@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
@@ -35,6 +36,7 @@ export default function ActiveOrderBanner() {
   const [showItems, setShowItems] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   /* -----------------------------------------------------------
      SOUNDS
@@ -45,16 +47,42 @@ export default function ActiveOrderBanner() {
   });
 
   /* -----------------------------------------------------------
-     INITIAL LOAD
+     1. WAIT FOR USER ID (fixes no-banner-until-refresh)
   ----------------------------------------------------------- */
   useEffect(() => {
-    const uid = localStorage.getItem("dg_user_id");
-    if (!uid) return;
+    let interval: number | undefined;
 
-    setUserId(uid);
+    const trySet = async () => {
+      const uid = typeof window !== "undefined" ? localStorage.getItem("dg_user_id") : null;
+      if (!uid) return;
+      setUserId(uid);
+      setLoading(false);
+      // One immediate fetch once we have the id
+      const res = await fetch(`/api/orders/active?user_id=${uid}`);
+      if (res.ok) {
+        const data = await res.json();
+        setOrder(data.order || null);
+      }
+      if (interval) clearInterval(interval);
+    };
+
+    trySet();
+    interval = window.setInterval(trySet, 500);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, []);
+
+  /* -----------------------------------------------------------
+     2. INITIAL ACTIVE ORDER LOAD (runs AFTER userId exists)The ActiveOrderBanner does not show because it is inside ProductsPage, so it mounts too late. Even the localStorage polling fix won't work if ProductsPage hydration happens before dg_user_id is written. Move <ActiveOrderBanner /> into app/layout.tsx, so it mounts globally before any pages, and runs independently from page-level hydration. This guarantees that localStorage and userId are detected correctly after login redirect.
+
+  ----------------------------------------------------------- */
+  useEffect(() => {
+    if (!userId) return;
 
     const fetchOrder = async () => {
-      const res = await fetch(`/api/orders/active?user_id=${uid}`);
+      const res = await fetch(`/api/orders/active?user_id=${userId}`);
       if (res.ok) {
         const data = await res.json();
         setOrder(data.order || null);
@@ -62,37 +90,28 @@ export default function ActiveOrderBanner() {
     };
 
     fetchOrder();
-
-    // One quick follow-up fetch to catch a just-placed order,
-    // then fall back to the regular 30s cadence.
-    const quick = window.setTimeout(fetchOrder, 5000);
-    const poll = window.setInterval(fetchOrder, 30000);
+    const quick = setTimeout(fetchOrder, 5000);
+    const poll = setInterval(fetchOrder, 30000);
 
     return () => {
-      window.clearTimeout(quick);
-      window.clearInterval(poll);
+      clearTimeout(quick);
+      clearInterval(poll);
     };
-  }, []);
+  }, [userId]);
 
   /* -----------------------------------------------------------
-     CATCH NEW ORDERS FOR THIS USER (INSERT/UPDATE)
+     3. LIVE SUBSCRIPTION FOR USER
   ----------------------------------------------------------- */
   useEffect(() => {
-    const uid = localStorage.getItem("dg_user_id");
-    if (!uid) return;
+    if (!userId) return;
 
     const channel = supabase
-      .channel(`orders-user-${uid}`)
+      .channel(`orders-user-${userId}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "orders",
-          filter: `user_id=eq.${uid}`,
-        },
+        { event: "*", schema: "public", table: "orders", filter: `user_id=eq.${userId}` },
         async () => {
-          const res = await fetch(`/api/orders/active?user_id=${uid}`);
+          const res = await fetch(`/api/orders/active?user_id=${userId}`);
           if (res.ok) {
             const data = await res.json();
             setOrder(data.order || null);
@@ -101,67 +120,26 @@ export default function ActiveOrderBanner() {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    return () => supabase.removeChannel(channel);
+  }, [userId]);
 
   /* -----------------------------------------------------------
-     ETA COUNTDOWN
+     4. LIVE SUBSCRIPTION FOR ACTIVE ORDER
   ----------------------------------------------------------- */
   useEffect(() => {
-    if (!order || !order.out_for_delivery_at || order.eta_minutes == null)
-      return;
+    if (!userId || !order?.id) return;
 
-    const compute = () => {
-      const start = new Date(order.out_for_delivery_at as string).getTime();
-      const etaMs = (order.eta_minutes ?? 0) * 60000;
-
-      const diff = Math.max(0, start + etaMs - Date.now());
-      setRemaining(diff);
-    };
-
-    compute();
-    const timer = window.setInterval(compute, 1000);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [order]);
-
-  /* -----------------------------------------------------------
-     BANNER SHAKE EVERY 5 SECONDS
-  ----------------------------------------------------------- */
-  useEffect(() => {
-    if (!order) return;
-
-    const interval = window.setInterval(() => {
-      setShake(true);
-      setTimeout(() => setShake(false), 600);
-    }, 5000);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [order]);
-
-  /* -----------------------------------------------------------
-     REALTIME SUBSCRIPTION
-  ----------------------------------------------------------- */
-  const activeOrderId = order?.id;
-
-  useEffect(() => {
-    if (!userId || !activeOrderId) return;
+    const id = order.id;
 
     const channel = supabase
-      .channel(`order-realtime-${activeOrderId}`)
+      .channel(`order-realtime-${id}`)
       .on(
         "postgres_changes",
         {
           event: "UPDATE",
           schema: "public",
           table: "orders",
-          filter: `id=eq.${activeOrderId}`,
+          filter: `id=eq.${id}`,
         },
         async (payload) => {
           const prev = payload.old as ActiveOrder;
@@ -169,35 +147,24 @@ export default function ActiveOrderBanner() {
 
           let changed = false;
 
-          // STATUS CHANGED
           if (prev.status !== next.status) {
             playStatusChange();
-            toast.success(`Order ${next.status.replace(/_/g, " ")}`, {
-              duration: 6000,
-            });
+            toast.success(`Order ${next.status.replace(/_/g, " ")}`, { duration: 6000 });
             changed = true;
           }
 
-          // OUT FOR DELIVERY
-          if (
-            prev.out_for_delivery_at !== next.out_for_delivery_at &&
-            next.out_for_delivery_at
-          ) {
+          if (prev.out_for_delivery_at !== next.out_for_delivery_at && next.out_for_delivery_at) {
             playOutForDelivery();
             toast("🚗 Courier is on the way!", {
               icon: "📦",
               duration: 6000,
-              style: { background: "#0ea5e9", color: "#fff" },
+              style: { background: "#0ea5e9", color: "white" },
             });
             changed = true;
           }
 
-          // ETA CHANGED
           if (prev.eta_minutes !== next.eta_minutes && next.eta_minutes != null) {
-            toast(`ETA updated: ${next.eta_minutes} min`, {
-              icon: "⏱️",
-              duration: 6000,
-            });
+            toast(`ETA updated: ${next.eta_minutes} min`, { icon: "⏱️", duration: 6000 });
             changed = true;
           }
 
@@ -212,22 +179,61 @@ export default function ActiveOrderBanner() {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
+    return () => supabase.removeChannel(channel);
+  }, [userId, order?.id]);
+
+  /* -----------------------------------------------------------
+     5. ETA COUNTDOWN
+  ----------------------------------------------------------- */
+  useEffect(() => {
+    if (!order?.out_for_delivery_at || order.eta_minutes == null) return;
+
+    const compute = () => {
+      const start = new Date(order.out_for_delivery_at).getTime();
+      const etaMs = order.eta_minutes * 60000;
+      const diff = Math.max(0, start + etaMs - Date.now());
+      setRemaining(diff);
     };
-  }, [userId, activeOrderId]);
+
+    compute();
+    const t = setInterval(compute, 1000);
+    return () => clearInterval(t);
+  }, [order?.out_for_delivery_at, order?.eta_minutes]);
+
+  /* -----------------------------------------------------------
+     6. SHAKE EVERY 5 SECONDS
+  ----------------------------------------------------------- */
+  useEffect(() => {
+    if (!order) return;
+
+    const interval = setInterval(() => {
+      setShake(true);
+      setTimeout(() => setShake(false), 600);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [order]);
 
   /* -----------------------------------------------------------
      RENDER
   ----------------------------------------------------------- */
-  if (!order) return null;
+  if (!order) {
+    if (loading) {
+      return null;
+    }
+    return null;
+  }
 
-  const etaText =
-    order.status === "out_for_delivery" && order.eta_minutes
-      ? remaining > 0
-        ? `${Math.max(1, Math.ceil(remaining / 60000))} min`
-        : "Arriving now"
-      : order.status.replace(/_/g, " ");
+  const etaText = (() => {
+    if (!order) return "";
+    if (order.status === "out_for_delivery" && order.eta_minutes) {
+      if (remaining > 0) {
+        return `${Math.max(1, Math.ceil(remaining / 60000))} min`;
+      }
+      return "Arriving now";
+    }
+    return order.status.replace(/_/g, " ");
+  })();
 
   const statusStyles = {
     pending: { bg: "from-yellow-500 to-amber-500", text: "Awaiting pickup" },
@@ -242,20 +248,18 @@ export default function ActiveOrderBanner() {
 
   return (
     <>
-      {/* SHAKE STYLE */}
+      {/* SHAKE CSS */}
       <style>
         {`
-          @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-            100% { transform: translateX(0); }
-          }
-          .shake {
-            animation: shake 0.6s ease-in-out;
-          }
-        `}
+        @keyframes shake {
+          0% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          50% { transform: translateX(5px); }
+          75% { transform: translateX(-5px); }
+          100% { transform: translateX(0); }
+        }
+        .shake { animation: shake 0.6s ease-in-out; }
+      `}
       </style>
 
       {/* BANNER */}
@@ -288,18 +292,14 @@ export default function ActiveOrderBanner() {
         </button>
       </div>
 
-      {/* DETAILS MODAL */}
+      {/* MODAL */}
       {detailsOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="w-full max-w-lg bg-slate-900 border border-blue-500/30 rounded-2xl p-5 space-y-4 shadow-xl">
-
             {/* HEADER */}
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold text-white">Order details</h3>
-              <button
-                className="text-white/70 hover:text-white"
-                onClick={() => setDetailsOpen(false)}
-              >
+              <button className="text-white/70 hover:text-white" onClick={() => setDetailsOpen(false)}>
                 ✕
               </button>
             </div>
@@ -328,21 +328,15 @@ export default function ActiveOrderBanner() {
                 className="w-full flex items-center justify-between px-3 py-2 text-white text-sm"
                 onClick={() => setShowItems((s) => !s)}
               >
-                <span className="font-semibold">
-                  Items ({order.order_items?.length || 0})
-                </span>
-                <span className="text-white/70 text-xs">
-                  {showItems ? "Hide" : "Show"}
-                </span>
+                <span className="font-semibold">Items ({order.order_items?.length || 0})</span>
+                <span className="text-white/70 text-xs">{showItems ? "Hide" : "Show"}</span>
               </button>
 
               {showItems && (
                 <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
                   {order.order_items?.map((item) => {
-                    const name =
-                      item.product?.name || item.restaurant_item?.name || "Item";
-                    const img =
-                      item.product?.image_url || item.restaurant_item?.image_url;
+                    const name = item.product?.name || item.restaurant_item?.name || "Item";
+                    const img = item.product?.image_url || item.restaurant_item?.image_url;
 
                     return (
                       <div
@@ -351,11 +345,7 @@ export default function ActiveOrderBanner() {
                       >
                         <div className="w-12 h-12 rounded-lg bg-slate-700 overflow-hidden">
                           {img ? (
-                            <img
-                              src={img}
-                              alt={name}
-                              className="w-full h-full object-cover"
-                            />
+                            <img src={img} alt={name} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">
                               No image

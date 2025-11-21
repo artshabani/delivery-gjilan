@@ -26,7 +26,10 @@ export default function AuthClient() {
         return;
       }
 
-      localStorage.setItem("dg_user_id", data.userId);
+localStorage.setItem("dg_user_id", data.userId);
+
+// 🔥 notify all listeners immediately (VERY IMPORTANT)
+window.dispatchEvent(new Event("dg_user_id-set"));
 
       // Correct admin check
       const { data: profile } = await supabase

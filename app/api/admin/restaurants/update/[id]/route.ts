@@ -12,14 +12,16 @@ export async function POST(
   if (Number.isNaN(restId)) {
     return NextResponse.json({ error: "Invalid id" }, { status: 400 });
   }
+
   const body = await req.json();
 
   const { error } = await adminSupabase
     .from("restaurants")
     .update({
       name: body.name,
-      description: body.description,
-      image_url: body.image_url,
+      description: body.description || "",
+      image_url: body.image_url || "",
+      category: body.category || null,    
       is_active: body.is_active ?? true,
     })
     .eq("id", restId);
@@ -28,3 +30,4 @@ export async function POST(
 
   return NextResponse.json({ success: true });
 }
+

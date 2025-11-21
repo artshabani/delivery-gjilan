@@ -237,10 +237,10 @@ export default function ActiveOrderBanner() {
   })();
 
   const statusStyles = {
-    pending: { bg: "from-yellow-500 to-amber-500", text: "Awaiting pickup" },
-    accepted: { bg: "from-sky-500 to-blue-500", text: "Preparing order" },
+    pending: { bg: "from-yellow-500 to-amber-500", text: "Prisni korierin" },
+    accepted: { bg: "from-sky-500 to-blue-500", text: "Porosia u pranua" },
     confirmed: { bg: "from-sky-500 to-blue-500", text: "Preparing order" },
-    out_for_delivery: { bg: "from-green-500 to-emerald-600", text: "Courier en route" },
+    out_for_delivery: { bg: "from-green-500 to-emerald-600", text: "Korieri rruges..." },
     delivered: { bg: "from-gray-600 to-slate-700", text: "Delivered" },
     canceled: { bg: "from-red-500 to-rose-600", text: "Canceled" },
   };
@@ -274,7 +274,7 @@ export default function ActiveOrderBanner() {
           }`}
         >
           <div>
-            <p className="text-white font-semibold">Track your order</p>
+            <p className="text-white font-semibold">Percjell porosine</p>
             <p className="text-white/90 text-sm">
               {order.status === "out_for_delivery" && order.eta_minutes
                 ? `ETA ${etaText}`
@@ -290,7 +290,7 @@ export default function ActiveOrderBanner() {
                 {order.status.replace(/_/g, " ")}
               </span>
             )}
-            <p className="text-blue-100 text-xs mt-1">Tap for details</p>
+            <p className="text-blue-100 text-xs mt-1">Prek per detaje</p>
           </div>
         </button>
       </div>

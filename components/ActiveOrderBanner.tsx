@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
@@ -38,45 +37,44 @@ export default function ActiveOrderBanner() {
   const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  /* -----------------------------------------------------------
+  /* ---------------------------------------------
      SOUNDS
-  ----------------------------------------------------------- */
+  --------------------------------------------- */
   const [playStatusChange] = useSound("/sounds/status-change.mp3", { volume: 0.8 });
   const [playOutForDelivery] = useSound("/sounds/order_out_for_delivery.mp3", {
     volume: 0.9,
   });
 
   /* -----------------------------------------------------------
-     1. WAIT FOR USER ID (fixes no-banner-until-refresh)
+     1. GET USER ID
   ----------------------------------------------------------- */
   useEffect(() => {
     let interval: number | undefined;
 
-    const trySet = async () => {
-      const uid = typeof window !== "undefined" ? localStorage.getItem("dg_user_id") : null;
+    const checkUser = async () => {
+      const uid = localStorage.getItem("dg_user_id");
       if (!uid) return;
+
       setUserId(uid);
       setLoading(false);
-      // One immediate fetch once we have the id
+
       const res = await fetch(`/api/orders/active?user_id=${uid}`);
       if (res.ok) {
         const data = await res.json();
         setOrder(data.order || null);
       }
+
       if (interval) clearInterval(interval);
     };
 
-    trySet();
-    interval = window.setInterval(trySet, 500);
+    checkUser();
+    interval = window.setInterval(checkUser, 400);
 
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   /* -----------------------------------------------------------
-     2. INITIAL ACTIVE ORDER LOAD (runs AFTER userId exists)The ActiveOrderBanner does not show because it is inside ProductsPage, so it mounts too late. Even the localStorage polling fix won't work if ProductsPage hydration happens before dg_user_id is written. Move <ActiveOrderBanner /> into app/layout.tsx, so it mounts globally before any pages, and runs independently from page-level hydration. This guarantees that localStorage and userId are detected correctly after login redirect.
-
+     2. INITIAL FETCH
   ----------------------------------------------------------- */
   useEffect(() => {
     if (!userId) return;
@@ -90,8 +88,8 @@ export default function ActiveOrderBanner() {
     };
 
     fetchOrder();
-    const quick = setTimeout(fetchOrder, 5000);
-    const poll = setInterval(fetchOrder, 30000);
+    const quick = window.setTimeout(fetchOrder, 5000);
+    const poll = window.setInterval(fetchOrder, 30000);
 
     return () => {
       clearTimeout(quick);
@@ -100,7 +98,7 @@ export default function ActiveOrderBanner() {
   }, [userId]);
 
   /* -----------------------------------------------------------
-     3. LIVE SUBSCRIPTION FOR USER
+     3. LISTEN FOR USER ORDER UPDATES
   ----------------------------------------------------------- */
   useEffect(() => {
     if (!userId) return;
@@ -112,19 +110,20 @@ export default function ActiveOrderBanner() {
         { event: "*", schema: "public", table: "orders", filter: `user_id=eq.${userId}` },
         async () => {
           const res = await fetch(`/api/orders/active?user_id=${userId}`);
-          if (res.ok) {
-            const data = await res.json();
-            setOrder(data.order || null);
-          }
+          if (!res.ok) return;
+          const data = await res.json();
+          setOrder(data.order || null);
         }
       )
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   /* -----------------------------------------------------------
-     4. LIVE SUBSCRIPTION FOR ACTIVE ORDER
+     4. LISTEN FOR REALTIME UPDATES FOR THIS ORDER
   ----------------------------------------------------------- */
   useEffect(() => {
     if (!userId || !order?.id) return;
@@ -179,36 +178,41 @@ export default function ActiveOrderBanner() {
       )
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [userId, order?.id]);
 
   /* -----------------------------------------------------------
-     5. ETA COUNTDOWN
+     5. ETA TIMER
   ----------------------------------------------------------- */
   useEffect(() => {
     if (!order?.out_for_delivery_at || order.eta_minutes == null) return;
 
+    const outAt = order.out_for_delivery_at;
+    const eta = order.eta_minutes;
+
     const compute = () => {
-      const start = new Date(order.out_for_delivery_at).getTime();
-      const etaMs = order.eta_minutes * 60000;
+      const start = new Date(outAt).getTime();
+      const etaMs = eta * 60000;
       const diff = Math.max(0, start + etaMs - Date.now());
       setRemaining(diff);
     };
 
     compute();
-    const t = setInterval(compute, 1000);
+    const t = window.setInterval(compute, 1000);
     return () => clearInterval(t);
   }, [order?.out_for_delivery_at, order?.eta_minutes]);
 
   /* -----------------------------------------------------------
-     6. SHAKE EVERY 5 SECONDS
+     6. SHAKE ANIMATION
   ----------------------------------------------------------- */
   useEffect(() => {
     if (!order) return;
 
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
       setShake(true);
-      setTimeout(() => setShake(false), 600);
+      window.setTimeout(() => setShake(false), 600);
     }, 5000);
 
     return () => clearInterval(interval);
@@ -217,15 +221,12 @@ export default function ActiveOrderBanner() {
   /* -----------------------------------------------------------
      RENDER
   ----------------------------------------------------------- */
-  if (!order) {
-    if (loading) {
-      return null;
-    }
+  if (!order || loading) {
     return null;
   }
 
+  /* ETA TEXT */
   const etaText = (() => {
-    if (!order) return "";
     if (order.status === "out_for_delivery" && order.eta_minutes) {
       if (remaining > 0) {
         return `${Math.max(1, Math.ceil(remaining / 60000))} min`;
@@ -246,20 +247,22 @@ export default function ActiveOrderBanner() {
 
   const palette = statusStyles[order.status as keyof typeof statusStyles];
 
+  /* -----------------------------------------------------------
+     JSX
+  ----------------------------------------------------------- */
   return (
     <>
-      {/* SHAKE CSS */}
       <style>
         {`
-        @keyframes shake {
-          0% { transform: translateX(0); }
-          25% { transform: translateX(-5px); }
-          50% { transform: translateX(5px); }
-          75% { transform: translateX(-5px); }
-          100% { transform: translateX(0); }
-        }
-        .shake { animation: shake 0.6s ease-in-out; }
-      `}
+          @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+          }
+          .shake { animation: shake 0.6s ease-in-out; }
+        `}
       </style>
 
       {/* BANNER */}
@@ -296,10 +299,12 @@ export default function ActiveOrderBanner() {
       {detailsOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="w-full max-w-lg bg-slate-900 border border-blue-500/30 rounded-2xl p-5 space-y-4 shadow-xl">
-            {/* HEADER */}
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold text-white">Order details</h3>
-              <button className="text-white/70 hover:text-white" onClick={() => setDetailsOpen(false)}>
+              <button
+                className="text-white/70 hover:text-white"
+                onClick={() => setDetailsOpen(false)}
+              >
                 ✕
               </button>
             </div>
@@ -328,15 +333,21 @@ export default function ActiveOrderBanner() {
                 className="w-full flex items-center justify-between px-3 py-2 text-white text-sm"
                 onClick={() => setShowItems((s) => !s)}
               >
-                <span className="font-semibold">Items ({order.order_items?.length || 0})</span>
+                <span className="font-semibold">
+                  Items ({order.order_items?.length || 0})
+                </span>
                 <span className="text-white/70 text-xs">{showItems ? "Hide" : "Show"}</span>
               </button>
 
               {showItems && (
                 <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
                   {order.order_items?.map((item) => {
-                    const name = item.product?.name || item.restaurant_item?.name || "Item";
-                    const img = item.product?.image_url || item.restaurant_item?.image_url;
+                    const name =
+                      item.product?.name ||
+                      item.restaurant_item?.name ||
+                      "Item";
+                    const img =
+                      item.product?.image_url || item.restaurant_item?.image_url;
 
                     return (
                       <div
@@ -347,9 +358,7 @@ export default function ActiveOrderBanner() {
                           {img ? (
                             <img src={img} alt={name} className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">
-                              No image
-                            </div>
+                            <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">No image</div>
                           )}
                         </div>
 
@@ -370,7 +379,6 @@ export default function ActiveOrderBanner() {
               )}
             </div>
 
-            {/* TOTAL */}
             <div className="flex justify-between items-center text-white font-semibold">
               <span>Total</span>
               <span>€{order.total.toFixed(2)}</span>

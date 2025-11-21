@@ -28,15 +28,15 @@ export default function AuthClient() {
 
       localStorage.setItem("dg_user_id", data.userId);
 
-      // Check if user is admin and redirect accordingly
+      // Correct admin check
       const { data: profile } = await supabase
         .from("user_profiles")
-        .select("is_admin")
+        .select("role")
         .eq("id", data.userId)
         .single();
 
-      if (profile?.is_admin === true) {
-        router.push("/admin/products");
+      if (profile?.role === "admin") {
+        router.push("/admin");
       } else {
         router.push("/");
       }

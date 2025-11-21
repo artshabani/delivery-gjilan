@@ -4,56 +4,55 @@ import Link from "next/link";
 
 export default function AdminHomePage() {
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
+    <div className="min-h-screen flex items-center justify-center bg-black px-6">
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="w-full max-w-md">
 
-        <Link
-          href="/admin/products"
-          className="p-4 border rounded-lg bg-gray-900 hover:bg-gray-800 transition text-white"
-        >
-          🛒 Products
-        </Link>
+        <h1 className="text-3xl font-bold text-center text-white mb-8">
+          Admin Panel
+        </h1>
 
-        <Link
-          href="/admin/restaurants"
-          className="p-4 border rounded-lg bg-gray-900 hover:bg-gray-800 transition text-white"
-        >
-          🍽️ Restaurants
-        </Link>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-        <Link
-          href="/admin/restaurants/categories"
-          className="p-4 border rounded-lg bg-gray-900 hover:bg-gray-800 transition text-white"
-        >
-          🧩 Restaurant Categories
-        </Link>
+          <Link
+            href="/admin/products"
+            className="p-4 border border-gray-700 rounded-lg bg-gray-900/80
+                       hover:bg-gray-800 hover:border-purple-400 transition 
+                       text-white text-lg"
+          >
+            🛒 Products
+          </Link>
 
-        <Link
-          href="/admin/restaurants/items"
-          className="p-4 border rounded-lg bg-gray-900 hover:bg-gray-800 transition text-white"
-        >
-          🍔 Restaurant Menu Items
-        </Link>
+          <Link
+            href="/admin/restaurants"
+            className="p-4 border border-gray-700 rounded-lg bg-gray-900/80
+                       hover:bg-gray-800 hover:border-blue-400 transition 
+                       text-white text-lg"
+          >
+            🍽️ Restaurants
+          </Link>
 
-        <Link
-          href="/admin/store-planning"
-          className="p-4 border rounded-lg bg-gray-900 hover:bg-gray-800 transition text-white"
-        >
-          🗺️ Store Planning Test
-        </Link>
+           <Link
+            href="/admin/orders"
+            className="p-4 border border-gray-700 rounded-lg bg-gray-900/80
+                       hover:bg-gray-800 hover:border-blue-400 transition 
+                       text-white text-lg"
+          >
+            Orders
+          </Link>
+          <Link
+            href="/admin/users"
+            className="p-4 border border-gray-700 rounded-lg bg-gray-900/80
+                       hover:bg-gray-800 hover:border-blue-400 transition 
+                       text-white text-lg"
+          >
+            Users
+          </Link>
 
-        <a
-          href="/api/admin/stores/diagnostic"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-4 border rounded-lg bg-gray-900 hover:bg-gray-800 transition text-white"
-        >
-          🔍 Store Diagnostic (JSON)
-        </a>
 
+        </div>
       </div>
+
     </div>
   );
 }

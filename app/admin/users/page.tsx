@@ -14,10 +14,9 @@ interface UserRow {
 }
 
 export default function AdminUsers() {
-  // 🔐 ALWAYS FIRST HOOK
   const guard = useAdminGuard();
 
-  // 🔥 ALWAYS RUN HOOKS UNCONDITIONALLY
+  // form states
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -42,21 +41,8 @@ export default function AdminUsers() {
     const fetchUsers = async () => {
       const res = await fetch("/api/admin/users/list");
       const result = await res.json();
-
-      if (result.users) {
-        setUsers(
-          result.users.map((u: any) => ({
-            id: u.id,
-            email: u.email,
-            first_name: u.first_name,
-            last_name: u.last_name,
-            phone: u.phone,
-            address: u.address,
-          }))
-        );
-      }
+      if (result.users) setUsers(result.users);
     };
-
     fetchUsers();
   }, []);
 
@@ -91,7 +77,6 @@ export default function AdminUsers() {
     setPhone("");
     setAddress("");
 
-    // reload users
     const reload = await fetch("/api/admin/users/list");
     setUsers((await reload.json()).users);
   };
@@ -100,7 +85,6 @@ export default function AdminUsers() {
   const showQrForUser = async (userId: string) => {
     const res = await fetch(`/api/admin/users/get-user-token?user_id=${userId}`);
     const result = await res.json();
-
     if (result.error) return alert(result.error);
 
     const link = `${window.location.origin}/auth?token=${result.token}`;
@@ -111,12 +95,10 @@ export default function AdminUsers() {
   // DELETE USER
   const deleteUser = async (userId: string) => {
     if (!confirm("Delete this user?")) return;
-
     const res = await fetch("/api/admin/users/delete", {
       method: "POST",
       body: JSON.stringify({ user_id: userId }),
     });
-
     const result = await res.json();
     if (result.error) return alert(result.error);
 
@@ -151,100 +133,135 @@ export default function AdminUsers() {
   };
 
   // -------------------------------------------
-  // ONLY RETURN AFTER ALL HOOKS ARE DEFINED
+  // ACCESS CONTROL
   // -------------------------------------------
-  if (guard.loading) {
+  if (guard.loading)
     return (
-      <div className="p-10 text-center text-lg">
+      <div className="min-h-screen flex items-center justify-center text-white">
         Checking admin access…
       </div>
     );
-  }
 
-  if (!guard.allowed) {
+  if (!guard.allowed)
     return (
       <div className="min-h-screen flex items-center justify-center text-red-500 text-2xl font-semibold">
         ⛔ Access denied — Admin only
       </div>
     );
-  }
 
   // -------------------------------------------
-  // NOW RENDER ADMIN PAGE
+  // RENDER ADMIN PAGE (DARK MODE)
   // -------------------------------------------
   return (
-    <div className="p-5 max-w-5xl mx-auto">
+<div className="min-h-screen bg-black text-gray-200 p-5 w-full">
+
       {/* NAVIGATION BUTTONS */}
       <div className="flex flex-wrap gap-2 mb-6">
         <a
           href="/admin/products"
-          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded text-sm transition"
+          className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 text-white rounded text-sm transition"
         >
           🛒 Products Dashboard
         </a>
+
         <a
           href="/admin/orders"
-          className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition"
+          className="px-3 py-1.5 bg-green-700 hover:bg-green-600 text-white rounded text-sm transition"
         >
           📦 Orders Dashboard
         </a>
+        <a
+          href="/admin/restaurants"
+          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm transition"
+        >
+          🍽️ Restaurants Dashboard
+        </a>
       </div>
 
-      <h1 className="text-3xl font-bold mb-6">Admin — Users</h1>
+      <h1 className="text-3xl font-bold mb-6 text-white">Admin — Users</h1>
 
       {/* CREATE USER */}
-      <div className="border p-6 rounded-lg bg-white shadow mb-8 space-y-3">
-        <h2 className="text-xl font-semibold mb-3">Create User</h2>
+<div className="border border-gray-700 p-6 rounded-lg bg-gray-900/80 shadow mb-8 space-y-3 w-full">
+        <h2 className="text-xl font-semibold mb-3 text-white">Create User</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="p-2 border rounded" />
-          <input placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="p-2 border rounded" />
-          <input placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="p-2 border rounded" />
-          <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="p-2 border rounded" />
-          <input placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} className="p-2 border rounded md:col-span-2" />
+          <input
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="p-2 bg-gray-800 border border-gray-700 rounded text-gray-200"
+          />
+          <input
+            placeholder="First Name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className="p-2 bg-gray-800 border border-gray-700 rounded text-gray-200"
+          />
+          <input
+            placeholder="Last Name"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            className="p-2 bg-gray-800 border border-gray-700 rounded text-gray-200"
+          />
+          <input
+            placeholder="Phone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="p-2 bg-gray-800 border border-gray-700 rounded text-gray-200"
+          />
+          <input
+            placeholder="Address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            className="p-2 bg-gray-800 border border-gray-700 rounded text-gray-200 md:col-span-2"
+          />
         </div>
 
-        <button onClick={createUser} className="bg-green-600 text-white p-2 rounded w-full md:w-48">
+        <button
+          onClick={createUser}
+          className="bg-green-700 hover:bg-green-600 text-white p-2 rounded w-full md:w-48"
+        >
           Create User
         </button>
       </div>
 
-     {/* QR CODE SECTION (MOVED UP) */}
-{qrCodeUrl && (
-  <div className="mb-6 p-6 border rounded-lg bg-white shadow text-center">
-    <h3 className="font-semibold mb-3">Login QR Code</h3>
-    <img src={qrCodeUrl} className="mx-auto w-48 h-48" />
-    <p className="mt-3 text-sm break-all">{loginLink}</p>
+      {/* QR CODE */}
+      {qrCodeUrl && (
+        <div className="mb-6 p-6 border border-gray-700 rounded-lg bg-gray-900/80 shadow text-center">
+          <h3 className="font-semibold mb-3 text-white">Login QR Code</h3>
 
-    <button
-      onClick={() => {
-        const a = document.createElement("a");
-        a.href = qrCodeUrl!;
-        a.download = "login_qr.png";
-        a.click();
-      }}
-      className="mt-3 bg-gray-800 text-white px-3 py-1 rounded"
-    >
-      Download QR
-    </button>
-  </div>
-)}
+          <img src={qrCodeUrl} className="mx-auto w-48 h-48" />
 
-{/* SEARCH */}
-<div className="mb-4">
-  <input
-    placeholder="Search users..."
-    value={search}
-    onChange={(e) => setSearch(e.target.value)}
-    className="p-2 border rounded w-full"
-  />
-</div>
+          <p className="mt-3 text-sm break-all text-gray-300">{loginLink}</p>
 
+          <button
+            onClick={() => {
+              const a = document.createElement("a");
+              a.href = qrCodeUrl!;
+              a.download = "login_qr.png";
+              a.click();
+            }}
+            className="mt-3 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded"
+          >
+            Download QR
+          </button>
+        </div>
+      )}
 
-      {/* TABLE */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      {/* SEARCH */}
+      <div className="mb-4">
+        <input
+          placeholder="Search users..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="p-2 bg-gray-800 border border-gray-700 rounded w-full text-gray-200"
+        />
+      </div>
+
+      {/* USERS TABLE */}
+<div className="bg-gray-900/70 border border-gray-700 shadow rounded-lg overflow-hidden w-full">
         <table className="w-full text-left border-collapse">
-          <thead className="bg-gray-100 text-gray-700 uppercase text-sm">
+          <thead className="bg-gray-800 text-gray-300 uppercase text-sm">
             <tr>
               <th className="p-3">Email</th>
               <th className="p-3">Name</th>
@@ -269,9 +286,9 @@ export default function AdminUsers() {
               .map((u, i) => (
                 <tr
                   key={u.id}
-                  className={`border-t hover:bg-gray-50 transition ${
-                    i % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  }`}
+                  className={`border-t border-gray-700 ${
+                    i % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
+                  } hover:bg-gray-700 transition`}
                 >
                   <td className="p-3">{u.email}</td>
                   <td className="p-3">
@@ -282,7 +299,12 @@ export default function AdminUsers() {
 
                   <td className="p-3 text-center">
                     <div className="flex justify-center gap-2">
-                      <button onClick={() => showQrForUser(u.id)} className="px-2 py-1 bg-blue-600 text-white rounded text-sm">QR</button>
+                      <button
+                        onClick={() => showQrForUser(u.id)}
+                        className="px-2 py-1 bg-blue-700 hover:bg-blue-600 text-white rounded text-sm"
+                      >
+                        QR
+                      </button>
                       <button
                         onClick={() => {
                           setEditingUser(u);
@@ -292,11 +314,16 @@ export default function AdminUsers() {
                           setEditPhone(u.phone || "");
                           setEditAddress(u.address || "");
                         }}
-                        className="px-2 py-1 bg-yellow-500 text-white rounded text-sm"
+                        className="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 text-white rounded text-sm"
                       >
                         Edit
                       </button>
-                      <button onClick={() => deleteUser(u.id)} className="px-2 py-1 bg-red-600 text-white rounded text-sm">Delete</button>
+                      <button
+                        onClick={() => deleteUser(u.id)}
+                        className="px-2 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-sm"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -307,24 +334,54 @@ export default function AdminUsers() {
 
       {/* EDIT MODAL */}
       {editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-96 space-y-4">
-            <h3 className="text-lg font-semibold">Edit User</h3>
-            <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="w-full p-2 border rounded" />
-            <input value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} className="w-full p-2 border rounded" />
-            <input value={editLastName} onChange={(e) => setEditLastName(e.target.value)} className="w-full p-2 border rounded" />
-            <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="w-full p-2 border rounded" />
-            <input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className="w-full p-2 border rounded" />
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center">
+          <div className="bg-gray-900 border border-gray-700 p-6 rounded-lg shadow-lg w-96 space-y-4 text-gray-200">
+            <h3 className="text-lg font-semibold text-white">Edit User</h3>
+
+            <input
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
+            />
+            <input
+              value={editFirstName}
+              onChange={(e) => setEditFirstName(e.target.value)}
+              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
+            />
+            <input
+              value={editLastName}
+              onChange={(e) => setEditLastName(e.target.value)}
+              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
+            />
+            <input
+              value={editPhone}
+              onChange={(e) => setEditPhone(e.target.value)}
+              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
+            />
+            <input
+              value={editAddress}
+              onChange={(e) => setEditAddress(e.target.value)}
+              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
+            />
 
             <div className="flex gap-2 pt-2">
-              <button onClick={saveEdit} className="bg-green-600 text-white px-3 py-2 rounded w-full">Save</button>
-              <button onClick={() => setEditingUser(null)} className="bg-gray-500 text-white px-3 py-2 rounded w-full">Cancel</button>
+              <button
+                onClick={saveEdit}
+                className="bg-green-700 hover:bg-green-600 text-white px-3 py-2 rounded w-full"
+              >
+                Save
+              </button>
+
+              <button
+                onClick={() => setEditingUser(null)}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded w-full"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>
       )}
-
-    
     </div>
   );
 }

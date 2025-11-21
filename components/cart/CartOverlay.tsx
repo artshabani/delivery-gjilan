@@ -4,13 +4,18 @@ import { useState } from "react";
 import Image from "next/image";
 import confetti from "canvas-confetti";
 import toast from "react-hot-toast";
+import { Info } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useCart } from "@/context/CartContext";
 
 export default function CartOverlay() {
+  const MIN_ORDER_TOTAL = 24;
+
   const {
     items: cartItems,
     totalQuantity,
+    subtotal,
+    restaurantMixFee,
     totalPrice,
     addItem,
     decreaseItem,
@@ -20,11 +25,57 @@ export default function CartOverlay() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [confirmOrderOpen, setConfirmOrderOpen] = useState(false);
-
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
   const hasCart = totalQuantity > 0;
+
+  /* -------------------------------------------------------
+     REQUIRE USER ID
+  -------------------------------------------------------- */
+  const requireUserId = () => {
+    const userId = localStorage.getItem("dg_user_id");
+
+    if (!userId) {
+      toast.custom(
+        (t) => (
+          <div
+            className={`${
+              t.visible ? "animate-enter" : "animate-leave"
+            } fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
+              bg-slate-900 text-white px-6 py-5 rounded-2xl shadow-xl 
+              border border-red-500/40 w-[92%] max-w-sm text-center`}
+          >
+            <p className="text-lg font-semibold text-red-400 mb-2">
+              User Not Found
+            </p>
+            <p className="text-white/80 text-sm leading-relaxed">
+              Nuk u gjet useri. Ju lutem skenoni QR CODE tuaj personal ose kontakto <br />
+              <strong>045-205-045</strong>.
+            </p>
+          </div>
+        ),
+        { duration: 5000 }
+      );
+
+      return null;
+    }
+
+    return userId;
+  };
+
+  /* -------------------------------------------------------
+     REQUIRE MINIMUM TOTAL (uses FINAL totalPrice)
+  -------------------------------------------------------- */
+  const requireMinimumTotal = () => {
+    if (totalPrice < MIN_ORDER_TOTAL) {
+      toast.error(
+        `Shuma minimale e porosise eshte €${MIN_ORDER_TOTAL.toFixed(2)}.`
+      );
+      return false;
+    }
+    return true;
+  };
 
   /* -------------------------------------------------------
      PLACE ORDER
@@ -32,15 +83,17 @@ export default function CartOverlay() {
   async function placeOrder() {
     try {
       toast.dismiss();
+      const userId = requireUserId();
+      const hasMinimum = requireMinimumTotal();
+      if (!userId || !hasMinimum) return;
+
       setPlacingOrder(true);
 
       const orderPayload: any = {
         total: totalPrice,
         created_at: new Date().toISOString(),
+        user_id: userId,
       };
-
-      const userId = localStorage.getItem("dg_user_id");
-      if (userId) orderPayload.user_id = userId;
 
       const { data: order, error: orderErr } = await supabase
         .from("orders")
@@ -49,6 +102,7 @@ export default function CartOverlay() {
         .single();
 
       if (!order || orderErr) {
+        console.error("Order creation error:", orderErr);
         setPlacingOrder(false);
         toast.error("Failed to create order");
         return;
@@ -64,7 +118,7 @@ export default function CartOverlay() {
         price: product.price,
         notes: product.notes ?? null,
         modifiers: product.modifiers ?? null,
-        item_type: product.type,
+        item_type: product.type ?? "grocery",
       }));
 
       const { error: itemsErr } = await supabase
@@ -72,12 +126,12 @@ export default function CartOverlay() {
         .insert(itemsPayload);
 
       if (itemsErr) {
+        console.error("Order items error:", itemsErr);
         setPlacingOrder(false);
         toast.error("Failed to add items");
         return;
       }
 
-      // Send email
       await fetch(
         "https://qnwnybyebiczlwxssblx.supabase.co/functions/v1/send-order-email",
         {
@@ -86,6 +140,8 @@ export default function CartOverlay() {
           body: JSON.stringify({
             orderId,
             total: totalPrice,
+            subtotal,
+            restaurantMixFee,
             userId,
             items: cartItems.map(({ product, quantity }) => ({
               name: product.name,
@@ -100,8 +156,6 @@ export default function CartOverlay() {
 
       clearCart();
       setPlacingOrder(false);
-
-      // Success popup + confetti
       setOrderSuccess(true);
 
       confetti({
@@ -119,7 +173,7 @@ export default function CartOverlay() {
   }
 
   /* -------------------------------------------------------
-     CART BODY
+     CART BODY RENDER
   -------------------------------------------------------- */
   const cartBody = (
     <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
@@ -128,7 +182,7 @@ export default function CartOverlay() {
       )}
 
       {cartItems.map(({ product, quantity }) => {
-        const usedPrice =
+        const price =
           product.is_on_sale && product.sale_price
             ? product.sale_price
             : product.price;
@@ -220,19 +274,14 @@ export default function CartOverlay() {
               View order
             </span>
 
-            <span
-  className={`text-base font-bold ${
-    totalPrice > 3 ? "hot-total" : "text-white"
-  }`}
->
-  €{totalPrice.toFixed(2)}
-</span>
-
+            <span className="text-base font-bold text-white">
+              €{totalPrice.toFixed(2)}
+            </span>
           </button>
         </div>
       )}
 
-      {/* POPUP CART */}
+      {/* CART POPUP */}
       {isCartOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center">
           <div
@@ -243,9 +292,7 @@ export default function CartOverlay() {
           <div className="relative z-10 w-[92%] max-w-md cart-border-track-blue">
             <div className="bg-slate-900 rounded-2xl shadow-2xl p-4 flex flex-col max-h-[80vh]">
               <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-semibold text-white">
-                  Your cart
-                </h2>
+                <h2 className="text-lg font-semibold text-white">Your cart</h2>
                 <button
                   onClick={() => setIsCartOpen(false)}
                   className="w-7 h-7 bg-slate-800 rounded-full text-white flex items-center justify-center"
@@ -257,18 +304,30 @@ export default function CartOverlay() {
               {cartBody}
 
               {/* SUBTOTAL */}
-              <div className="mt-4 border-t border-white/10 pt-3 flex justify-between items-center">
-                <span className="text-sm font-semibold text-white">
-                  Subtotal
-                </span>
-                <span
-  className={`text-base font-bold ${
-    totalPrice > 3 ? "hot-total" : "text-white"
-  }`}
->
-  €{totalPrice.toFixed(2)}
-</span>
+              <div className="mt-4 border-t border-white/10 pt-3 space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-sm text-white/80">Subtotal</span>
+                  <span className="text-sm text-white/80">
+                    €{subtotal.toFixed(2)}
+                  </span>
+                </div>
 
+                {restaurantMixFee > 0 && (
+                  <div className="flex justify-between items-center text-yellow-300">
+                    <span className="text-sm flex items-center gap-1.5">
+                      <Info size={16} />
+                      Order from 2 restaurants fee
+                    </span>
+                    <span className="text-sm">+€{restaurantMixFee.toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between pt-1">
+                  <span className="text-base font-bold text-white">Total</span>
+                  <span className="text-base font-bold text-white">
+                    €{totalPrice.toFixed(2)}
+                  </span>
+                </div>
               </div>
 
               <div className="flex gap-3 mt-4">
@@ -281,6 +340,9 @@ export default function CartOverlay() {
 
                 <button
                   onClick={() => {
+                    if (!requireMinimumTotal()) return;
+                    const userId = requireUserId();
+                    if (!userId) return;
                     setIsCartOpen(false);
                     setConfirmOrderOpen(true);
                   }}
@@ -294,7 +356,7 @@ export default function CartOverlay() {
         </div>
       )}
 
-      {/* CONFIRM CLEAR */}
+      {/* CLEAR CART MODAL */}
       {confirmClearOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-[999]">
           <div
@@ -333,7 +395,7 @@ export default function CartOverlay() {
         </div>
       )}
 
-      {/* CONFIRM ORDER */}
+      {/* CONFIRM ORDER MODAL */}
       {confirmOrderOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-[999]">
           <div
@@ -351,12 +413,11 @@ export default function CartOverlay() {
 
             <div className="flex gap-3">
               <button
-  onClick={() => setConfirmOrderOpen(false)}
-  className="flex-1 py-2 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-lg transition"
->
-  Cancel
-</button>
-
+                onClick={() => setConfirmOrderOpen(false)}
+                className="flex-1 py-2 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-lg transition"
+              >
+                Cancel
+              </button>
 
               <button
                 onClick={async () => {
@@ -381,7 +442,8 @@ export default function CartOverlay() {
             <div className="w-32 h-32 rounded-full border-4 border-blue-500/40 border-t-blue-500 animate-spin"></div>
 
             <p className="text-white text-xl font-medium mt-6">
-              Porosia duke u realizuar... <small>Korieri do ju kontaktoj!</small>
+              Porosia duke u realizuar...{" "}
+              <small>Korieri do ju kontaktoj!</small>
             </p>
           </div>
         </div>
@@ -406,7 +468,7 @@ export default function CartOverlay() {
         </div>
       )}
 
-      {/* ANIMATIONS */}
+      {/* GLOBAL ANIMATIONS */}
       <style jsx global>{`
         @keyframes pop {
           0% {
@@ -450,6 +512,36 @@ export default function CartOverlay() {
 
         .animate-fadeInSlow {
           animation: fadeInSlow 0.8s ease-out 0.2s forwards;
+        }
+
+        @keyframes toastEnter {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -60%) scale(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+        }
+
+        @keyframes toastLeave {
+          0% {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-50%, -40%) scale(0.9);
+          }
+        }
+
+        .animate-enter {
+          animation: toastEnter 0.25s ease-out;
+        }
+
+        .animate-leave {
+          animation: toastLeave 0.25s ease-in forwards;
         }
       `}</style>
     </>

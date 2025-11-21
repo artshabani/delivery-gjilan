@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 export function useAdminGuard() {
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     async function check() {
@@ -15,14 +16,15 @@ export function useAdminGuard() {
         return;
       }
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("user_profiles")
         .select("role")
         .eq("id", userId)
         .single();
 
-      if (!error && data?.role === "admin") {
-        setAllowed(true);
+      if (data?.role) {
+        setRole(data.role);
+        if (data.role === "admin") setAllowed(true);
       }
 
       setLoading(false);
@@ -31,5 +33,5 @@ export function useAdminGuard() {
     check();
   }, []);
 
-  return { loading, allowed };
+  return { loading, allowed, role };
 }

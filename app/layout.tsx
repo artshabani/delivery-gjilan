@@ -5,6 +5,7 @@ import { Toaster } from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 import CartOverlay from "@/components/cart/CartOverlay";
 import { Analytics } from '@vercel/analytics/next';
+import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 
 
 export const metadata = {
@@ -31,6 +32,7 @@ export default function RootLayout({
           <Analytics />
           {/* 🔥 Global cart badge + popup on every page */}
           <CartOverlay />
+          <ActiveOrderBanner />
         </ClientProviders>
 
         {/* Global toast notifications */}

@@ -3,11 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ShoppingBag, Utensils } from "lucide-react";
+import { ShoppingBag, Utensils, Shield } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useAdminGuard } from "@/app/hooks/useAdminGuard"
+import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 
 export default function Home() {
   const [name, setName] = useState<string | null>(null);
+  const { loading, allowed } = useAdminGuard();
 
   // Fetch logged-in user's name
   useEffect(() => {
@@ -15,19 +18,22 @@ export default function Home() {
       const uid = localStorage.getItem("dg_user_id");
       if (!uid) return;
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("user_profiles")
         .select("first_name")
         .eq("id", uid)
         .single();
 
-      if (!error && data?.first_name) {
+      if (data?.first_name) {
         setName(data.first_name);
       }
     };
 
     loadUser();
   }, []);
+
+  // ⛔ Prevent page flashing while loading
+  if (loading) return null;
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 pb-16">
@@ -53,7 +59,6 @@ export default function Home() {
             className="
               w-full p-6 rounded-2xl border cursor-pointer 
               flex items-center gap-4 transition-shadow
-
               bg-gradient-to-r from-purple-600/60 to-purple-800/60
               backdrop-blur-xl shadow-lg border-purple-300/20
               hover:shadow-purple-500/40
@@ -65,7 +70,9 @@ export default function Home() {
 
             <div className="flex flex-col">
               <p className="text-xl font-semibold text-white">Groceries</p>
-              <p className="text-sm text-purple-200/70">Snacks, drinks, essentials</p>
+              <p className="text-sm text-purple-200/70">
+                Snacks, drinks, essentials
+              </p>
             </div>
           </motion.div>
         </Link>
@@ -77,7 +84,6 @@ export default function Home() {
             className="
               w-full p-6 rounded-2xl border cursor-pointer 
               flex items-center gap-4 transition-shadow
-
               bg-gradient-to-r from-blue-600/60 to-blue-800/60
               backdrop-blur-xl shadow-lg border-blue-300/20
               hover:shadow-blue-500/40
@@ -94,7 +100,36 @@ export default function Home() {
           </motion.div>
         </Link>
 
+        {/* 🔥 ADMIN DASHBOARD (ONLY IF ADMIN) */}
+        {allowed && (
+          <Link href="/admin">
+            <motion.div
+              whileTap={{ scale: 0.97 }}
+              className="
+                w-full p-6 rounded-2xl border cursor-pointer 
+                flex items-center gap-4 transition-shadow
+
+                bg-gradient-to-r from-green-600/60 to-green-800/60
+                backdrop-blur-xl shadow-lg border-green-300/20
+                hover:shadow-green-500/40
+              "
+            >
+              <div className="w-14 h-14 bg-black/30 rounded-xl flex items-center justify-center">
+                <Shield size={32} className="text-green-200" />
+              </div>
+
+              <div className="flex flex-col">
+                <p className="text-xl font-semibold text-white">Admin Panel</p>
+                <p className="text-sm text-green-200/70">
+                  Manage stores, products, orders
+                </p>
+              </div>
+            </motion.div>
+          </Link>
+        )}
+
       </div>
+      <ActiveOrderBanner />
     </div>
   );
 }

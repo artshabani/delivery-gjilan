@@ -6,6 +6,12 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
+  if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
+
+  const itemId = Number(id);
+  if (Number.isNaN(itemId)) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  }
   const body = await req.json();
 
   const { error } = await adminSupabase
@@ -16,7 +22,7 @@ export async function POST(
       description: body.description,
       image_url: body.image_url,
     })
-    .eq("id", id);
+    .eq("id", itemId);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 

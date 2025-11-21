@@ -68,7 +68,7 @@ export default function AdminProductsPage() {
     );
 
   return (
-    <div className="p-6 max-w-5xl mx-auto min-h-screen bg-gray-900 text-gray-200">
+    <div className="min-h-screen w-full bg-gradient-to-b from-slate-950 via-slate-900 to-black text-gray-200 p-6 sm:p-8">
 
       {/* NAVIGATION BUTTONS */}
       <div className="flex flex-wrap gap-2 mb-6">
@@ -79,16 +79,22 @@ export default function AdminProductsPage() {
           👥 Users Dashboard
         </a>
         <a
-          href="/products"
-          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded text-sm transition"
-        >
-          🛒 Customer Products Page
-        </a>
-        <a
           href="/admin/orders"
           className="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded text-sm transition"
         >
           📦 Orders Dashboard
+        </a>
+        <a
+          href="/admin/restaurants"
+          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-sm transition"
+        >
+          🍽️ Restaurants Dashboard
+        </a>
+        <a
+          href="/products"
+          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded text-sm transition"
+        >
+          🛒 Customer Products Page
         </a>
       </div>
 
@@ -136,7 +142,7 @@ export default function AdminProductsPage() {
                 {p.image_url ? (
                   <img
                     src={p.image_url}
-                    className="w-14 h-14 rounded object-cover"
+                  className="w-14 h-14 rounded object-cover"
                   />
                 ) : (
                   <div className="w-14 h-14 bg-gray-700 rounded" />

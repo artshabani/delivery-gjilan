@@ -117,7 +117,11 @@ export default function RestaurantDetail() {
 
       {/* ITEM MODAL */}
       {selectedItem && (
-        <ItemModal item={selectedItem} onClose={() => setSelectedItem(null)} />
+        <ItemModal
+          item={selectedItem}
+          restaurantId={restaurantId}
+          onClose={() => setSelectedItem(null)}
+        />
       )}
 
     </div>
@@ -127,13 +131,22 @@ export default function RestaurantDetail() {
 /* ----------------------------------------------------
       ITEM MODAL — GLASSMORPHISM + BLUE + MINT
 ---------------------------------------------------- */
-function ItemModal({ item, onClose }: any) {
+function ItemModal({ item, restaurantId, onClose }: any) {
   const { addItem } = useCart();
   const [notes, setNotes] = useState("");
   const [quantity, setQuantity] = useState(1);
 
   function addToCart() {
-    addItem({ ...item, notes }, quantity, notes);
+    addItem(
+      {
+        ...item,
+        notes,
+        type: "restaurant",
+        restaurant_id: item.restaurant_id || item.restaurantId || restaurantId,
+      },
+      quantity,
+      notes
+    );
     onClose();
   }
 

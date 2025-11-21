@@ -6,17 +6,23 @@ export const runtime = "nodejs";
 
 export async function DELETE(
   req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } }
 ) {
-  const { id } = await context.params;
+  const { id } = context.params;
 
   if (!id) {
-    return NextResponse.json({ error: "Missing item id" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing item id" },
+      { status: 400 }
+    );
   }
 
   const itemId = Number(id);
   if (Number.isNaN(itemId)) {
-    return NextResponse.json({ error: "Invalid item id" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid item id" },
+      { status: 400 }
+    );
   }
 
   const { error } = await adminSupabase
@@ -26,7 +32,10 @@ export async function DELETE(
 
   if (error) {
     console.error("ERROR deleting item:", error);
-    return NextResponse.json({ error }, { status: 400 });
+    return NextResponse.json(
+      { error: error.message || "Failed to delete item" },
+      { status: 400 }
+    );
   }
 
   return NextResponse.json({ success: true });

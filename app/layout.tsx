@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import CartOverlay from "@/components/cart/CartOverlay";
 import { Analytics } from '@vercel/analytics/next';
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
+import SiteClosedOverlay from "@/components/SiteClosedOverlay";
 
 
 export const metadata = {
@@ -15,7 +16,7 @@ export const metadata = {
 
 // Attach supabase client to window for debugging ONLY in browser
 if (typeof window !== "undefined") {
-  // @ts-ignore
+  // @ts-expect-error attach for debugging only
   window.supabase = supabase;
 }
 
@@ -33,6 +34,7 @@ export default function RootLayout({
           {/* 🔥 Global cart badge + popup on every page */}
           <CartOverlay />
           <ActiveOrderBanner />
+          <SiteClosedOverlay />
         </ClientProviders>
 
         {/* Global toast notifications */}

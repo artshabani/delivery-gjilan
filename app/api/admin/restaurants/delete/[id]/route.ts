@@ -6,20 +6,26 @@ export const runtime = "nodejs";
 
 export async function DELETE(
   req: Request,
-  context: { params: Promise<{ id: string }> }
+  context: { params: { id: string } }
 ) {
-  const { id } = await context.params;
+  const { id } = context.params;
 
   if (!id) {
-    return NextResponse.json({ error: "Missing restaurant id" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing restaurant id" },
+      { status: 400 }
+    );
   }
 
   const restId = Number(id);
   if (Number.isNaN(restId)) {
-    return NextResponse.json({ error: "Invalid restaurant id" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Invalid restaurant id" },
+      { status: 400 }
+    );
   }
 
-  // First delete all items connected to this restaurant
+  // Delete items first
   const { error: itemDeleteError } = await adminSupabase
     .from("restaurant_items")
     .delete()
@@ -27,7 +33,10 @@ export async function DELETE(
 
   if (itemDeleteError) {
     console.error("ERROR deleting restaurant items:", itemDeleteError);
-    return NextResponse.json({ error: itemDeleteError.message || "Failed to delete items" }, { status: 400 });
+    return NextResponse.json(
+      { error: itemDeleteError.message || "Failed to delete items" },
+      { status: 400 }
+    );
   }
 
   // Delete restaurant
@@ -38,7 +47,10 @@ export async function DELETE(
 
   if (restaurantDeleteError) {
     console.error("ERROR deleting restaurant:", restaurantDeleteError);
-    return NextResponse.json({ error: restaurantDeleteError.message || "Failed to delete restaurant" }, { status: 400 });
+    return NextResponse.json(
+      { error: restaurantDeleteError.message || "Failed to delete restaurant" },
+      { status: 400 }
+    );
   }
 
   return NextResponse.json({ success: true });

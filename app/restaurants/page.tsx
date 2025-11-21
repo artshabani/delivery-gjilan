@@ -14,6 +14,8 @@ export default function RestaurantsPage() {
     { label: "Hamburger", icon: "🍔" },
     { label: "Dyner", icon: "🌯" },
     { label: "Pizza", icon: "🍕" },
+    { label: "Restaurant", icon: "🍽️" },
+
   ];
 
   useEffect(() => {

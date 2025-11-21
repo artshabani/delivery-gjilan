@@ -6,6 +6,7 @@ export async function POST(req: Request) {
 
   const { name, description, image_url, category } = data;
 
+  // Basic required fields
   if (!name || !category) {
     return NextResponse.json(
       { error: "Name and category are required" },
@@ -13,14 +14,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const validCategories = ["Hamburger", "Dyner", "Pizza"];
-
-  if (!validCategories.includes(category)) {
-    return NextResponse.json(
-      { error: "Invalid category" },
-      { status: 400 }
-    );
-  }
+  // ⛔ Removed the validCategories validation completely
 
   const { error } = await adminSupabase.from("restaurants").insert({
     name,
@@ -30,7 +24,8 @@ export async function POST(req: Request) {
     is_active: true,
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 400 });
 
   return NextResponse.json({ success: true });
 }

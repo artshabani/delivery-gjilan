@@ -62,10 +62,47 @@ export default function ActiveOrderBanner() {
     };
 
     fetchOrder();
+
+    // One quick follow-up fetch to catch a just-placed order,
+    // then fall back to the regular 30s cadence.
+    const quick = window.setTimeout(fetchOrder, 5000);
     const poll = window.setInterval(fetchOrder, 30000);
 
     return () => {
+      window.clearTimeout(quick);
       window.clearInterval(poll);
+    };
+  }, []);
+
+  /* -----------------------------------------------------------
+     CATCH NEW ORDERS FOR THIS USER (INSERT/UPDATE)
+  ----------------------------------------------------------- */
+  useEffect(() => {
+    const uid = localStorage.getItem("dg_user_id");
+    if (!uid) return;
+
+    const channel = supabase
+      .channel(`orders-user-${uid}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+          filter: `user_id=eq.${uid}`,
+        },
+        async () => {
+          const res = await fetch(`/api/orders/active?user_id=${uid}`);
+          if (res.ok) {
+            const data = await res.json();
+            setOrder(data.order || null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
     };
   }, []);
 

@@ -40,16 +40,16 @@ export default function AdminRestaurantsPage() {
   const [modal, setModal] = useState<
     | null
     | {
-        type:
-          | "create"
-          | "edit"
-          | "add-item"
-          | "delete"
-          | "item-edit"
-          | "item-delete";
-        restaurant: Restaurant | null;
-        item?: any;
-      }
+      type:
+      | "create"
+      | "edit"
+      | "add-item"
+      | "delete"
+      | "item-edit"
+      | "item-delete";
+      restaurant: Restaurant | null;
+      item?: any;
+    }
   >(null);
 
   const [restForm, setRestForm] = useState({
@@ -235,7 +235,7 @@ export default function AdminRestaurantsPage() {
       const errorData = await res.json();
       toast.error(errorData.error || "Failed to delete item (unknown reason)");
     }
-}
+  }
 
   async function deleteRestaurant(id: number) {
     const res = await fetch(`/api/admin/restaurants/delete/${id}`, {
@@ -697,7 +697,7 @@ export default function AdminRestaurantsPage() {
 
                   <button
                     onClick={() =>
-                      deleteItem(modal.item.id, modal.restaurant.id)
+                      deleteItem(modal.item.id, modal.restaurant?.id ?? 0)
                     }
                     className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 font-semibold"
                   >
@@ -725,7 +725,7 @@ export default function AdminRestaurantsPage() {
                   </button>
 
                   <button
-                    onClick={() => deleteRestaurant(modal.restaurant.id)}
+                    onClick={() => deleteRestaurant(modal.restaurant?.id ?? 0)}
                     className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-700 font-semibold"
                   >
                     Delete

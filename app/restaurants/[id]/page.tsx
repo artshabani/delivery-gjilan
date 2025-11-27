@@ -30,10 +30,13 @@ export default function RestaurantDetail() {
   const [showSectionManager, setShowSectionManager] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
   const [newSectionEmoji, setNewSectionEmoji] = useState("🍽️");
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editSectionForm, setEditSectionForm] = useState({ name: "", emoji: "" });
 
-  // Item creation state (admin only)
+  // Item creation/editing state (admin only)
   const [showAddItem, setShowAddItem] = useState(false);
   const [addingItem, setAddingItem] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [itemForm, setItemForm] = useState({
     name: "",
     price: "",
@@ -45,28 +48,28 @@ export default function RestaurantDetail() {
   const { addItem } = useCart();
 
   // Function to update item section in database
-  async function updateItemSection(itemId: number, section: string | null) {
+  async function updateItemSection(itemId: number, section: string | null, refresh: boolean = true) {
     try {
       const res = await fetch(`/api/admin/restaurants/items/update/${itemId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: items.find(i => i.id === itemId)?.name,
-          price: items.find(i => i.id === itemId)?.price,
-          description: items.find(i => i.id === itemId)?.description,
-          image_url: items.find(i => i.id === itemId)?.image_url,
           section: section,
         }),
       });
 
       if (res.ok) {
-        // Update local state
-        setItems(items.map(item =>
-          item.id === itemId ? { ...item, section } : item
-        ));
-        // toast.success("Section updated!"); // Uncomment if toast is available
+        if (refresh) {
+          toast.success("Item section updated");
+          // Reload items
+          const itemsRes = await fetch(
+            `/api/admin/restaurants/items/list?restaurant_id=${restaurantId}`
+          );
+          const itemsData = await itemsRes.json();
+          setItems(itemsData.items || []);
+        }
       } else {
-        // toast.error("Failed to update section"); // Uncomment if toast is available
+        toast.error("Failed to update section");
         console.error("Failed to update section");
       }
     } catch (err) {
@@ -116,6 +119,78 @@ export default function RestaurantDetail() {
     } finally {
       setAddingItem(false);
     }
+  }
+
+  // Update existing item
+  async function updateItem() {
+    if (!editingItemId) return;
+
+    setAddingItem(true);
+    try {
+      const res = await fetch(`/api/admin/restaurants/items/update/${editingItemId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: itemForm.name,
+          price: parseFloat(itemForm.price),
+          description: itemForm.description,
+          image_url: itemForm.image_url,
+          section: itemForm.section || null,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success("Item updated!");
+        setItemForm({ name: "", price: "", description: "", image_url: "", section: "" });
+        setEditingItemId(null);
+        setShowAddItem(false);
+        // Reload items
+        const itemsRes = await fetch(`/api/admin/restaurants/items/list?restaurant_id=${restaurantId}`);
+        const itemsData = await itemsRes.json();
+        setItems(itemsData.items || []);
+      } else {
+        toast.error("Failed to update item");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Error updating item");
+    } finally {
+      setAddingItem(false);
+    }
+  }
+
+  // Update section name/emoji
+  async function updateSection(oldName: string, newName: string, newEmoji: string) {
+    // 1. Update local sections state
+    const sectionExists = sections.find(s => s.name === oldName);
+
+    if (sectionExists) {
+      // If it was in our hardcoded list, update it there
+      setSections(sections.map(s =>
+        s.name === oldName ? { name: newName, emoji: newEmoji } : s
+      ));
+    } else {
+      // If it was dynamic, add it to our list so the emoji persists for this session
+      setSections([...sections, { name: newName, emoji: newEmoji }]);
+    }
+
+    // 2. Find all items in this section
+    const itemsToUpdate = items.filter(item => item.section === oldName);
+
+    // 3. Update all items in DB (without refreshing list each time)
+    const updatePromises = itemsToUpdate.map(item =>
+      updateItemSection(item.id, newName, false)
+    );
+
+    await Promise.all(updatePromises);
+
+    // 4. Reload items once at the end
+    const itemsRes = await fetch(`/api/admin/restaurants/items/list?restaurant_id=${restaurantId}`);
+    const itemsData = await itemsRes.json();
+    setItems(itemsData.items || []);
+
+    setEditingSection(null);
+    toast.success("Section updated!");
   }
 
   // Load sections from localStorage (This part is now removed as per instruction)
@@ -177,11 +252,26 @@ export default function RestaurantDetail() {
   if (!restaurant)
     return <p className="p-6 text-red-400 font-semibold">Restaurant not found.</p>;
 
+  // Dynamically extract unique sections from items
+  const uniqueSectionNames = Array.from(
+    new Set(items.filter(item => item.section).map(item => item.section))
+  );
+
+  // Merge with hardcoded sections for admin management
+  const allSections = [
+    ...sections,
+    ...uniqueSectionNames
+      .filter(name => !sections.find(s => s.name === name))
+      .map(name => ({ name, emoji: "🍽️" }))
+  ];
+
   // Group items by assigned sections
-  const groupedSections = sections.map(section => ({
-    ...section,
-    items: items.filter(item => item.section === section.name)
-  })).filter(section => section.items.length > 0);
+  const groupedSections = allSections
+    .map(section => ({
+      ...section,
+      items: items.filter(item => item.section === section.name)
+    }))
+    .filter(section => section.items.length > 0);
 
   // Unassigned items
   const unassignedItems = items.filter(item => !item.section);
@@ -255,33 +345,80 @@ export default function RestaurantDetail() {
             {/* Existing Sections */}
             <div className="space-y-2">
               <p className="text-sm font-semibold mb-2">Existing Sections</p>
-              {sections.map((section, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
-                  <span>{section.emoji} {section.name}</span>
-                  <button
-                    onClick={async () => {
-                      // Remove section and unassign items
-                      setSections(sections.filter((_, i) => i !== idx));
-                      // Unassign all items with this section
-                      const itemsToUnassign = items.filter(item => item.section === section.name);
-                      for (const item of itemsToUnassign) {
-                        await updateItemSection(item.id, null);
-                      }
-                    }}
-                    className="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-sm"
-                  >
-                    Delete
-                  </button>
+              {allSections.map((section, idx) => (
+                <div key={idx} className="flex items-center gap-2 p-3 bg-slate-800/50 rounded-lg">
+                  {editingSection === section.name ? (
+                    // Edit mode
+                    <>
+                      <input
+                        type="text"
+                        value={editSectionForm.emoji}
+                        onChange={(e) => setEditSectionForm({ ...editSectionForm, emoji: e.target.value })}
+                        className="w-12 px-2 py-1 bg-slate-700 rounded text-center"
+                        maxLength={2}
+                      />
+                      <input
+                        type="text"
+                        value={editSectionForm.name}
+                        onChange={(e) => setEditSectionForm({ ...editSectionForm, name: e.target.value })}
+                        className="flex-1 px-2 py-1 bg-slate-700 rounded"
+                      />
+                      <button
+                        onClick={() => {
+                          if (editSectionForm.name.trim()) {
+                            updateSection(section.name, editSectionForm.name, editSectionForm.emoji);
+                          }
+                        }}
+                        className="px-3 py-1 bg-green-600 hover:bg-green-500 rounded text-sm"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => setEditingSection(null)}
+                        className="px-3 py-1 bg-gray-600 hover:bg-gray-500 rounded text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    // View mode
+                    <>
+                      <span className="flex-1">{section.emoji} {section.name}</span>
+                      <button
+                        onClick={() => {
+                          setEditingSection(section.name);
+                          setEditSectionForm({ name: section.name, emoji: section.emoji });
+                        }}
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-sm"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={async () => {
+                          // Remove section from hardcoded list if it exists there
+                          setSections(sections.filter(s => s.name !== section.name));
+                          // Unassign all items with this section
+                          const itemsToUnassign = items.filter(item => item.section === section.name);
+                          for (const item of itemsToUnassign) {
+                            await updateItemSection(item.id, null);
+                          }
+                        }}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-sm"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* ADD ITEM FORM - Admin Only */}
+        {/* ADD/EDIT ITEM FORM - Admin Only */}
         {isAdmin && showAddItem && (
           <div className="mb-8 p-6 bg-slate-900/50 border border-slate-800 rounded-2xl">
-            <h3 className="text-xl font-bold mb-4">Add New Item</h3>
+            <h3 className="text-xl font-bold mb-4">{editingItemId ? "Edit Item" : "Add New Item"}</h3>
 
             <div className="space-y-3">
               <div>
@@ -335,7 +472,7 @@ export default function RestaurantDetail() {
                   onChange={(e) => setItemForm({ ...itemForm, section: e.target.value })}
                 >
                   <option value="">No Section</option>
-                  {sections.map((section) => (
+                  {allSections.map((section) => (
                     <option key={section.name} value={section.name}>
                       {section.emoji} {section.name}
                     </option>
@@ -344,11 +481,11 @@ export default function RestaurantDetail() {
               </div>
 
               <button
-                onClick={addItemToRestaurant}
+                onClick={editingItemId ? updateItem : addItemToRestaurant}
                 disabled={addingItem}
                 className="w-full py-2 bg-green-600 hover:bg-green-500 rounded-lg font-semibold disabled:opacity-50 transition"
               >
-                {addingItem ? "Adding..." : "Add Item"}
+                {addingItem ? "Saving..." : (editingItemId ? "Update Item" : "Add Item")}
               </button>
             </div>
           </div>
@@ -387,7 +524,7 @@ export default function RestaurantDetail() {
                       className="mt-2 px-3 py-1 bg-slate-700 rounded-lg text-sm"
                     >
                       <option value="">Assign to section...</option>
-                      {sections.map((section) => (
+                      {allSections.map((section) => (
                         <option key={section.name} value={section.name}>
                           {section.emoji} {section.name}
                         </option>
@@ -437,14 +574,40 @@ export default function RestaurantDetail() {
                       </p>
                     </div>
 
-                    <button
-                      onClick={() => setSelectedItem(item)}
-                      className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 
-                                 active:scale-95 transition flex items-center justify-center 
-                                 shadow-lg shadow-blue-600/40"
-                    >
-                      <Plus size={22} className="text-white" />
-                    </button>
+                    <div className="flex gap-2">
+                      {isAdmin && (
+                        <button
+                          onClick={() => {
+                            setEditingItemId(item.id);
+                            setItemForm({
+                              name: item.name,
+                              price: item.price.toString(),
+                              description: item.description || "",
+                              image_url: item.image_url || "",
+                              section: item.section || "",
+                            });
+                            setShowAddItem(true);
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          className="w-10 h-10 rounded-full bg-purple-600 hover:bg-purple-500 
+                                     active:scale-95 transition flex items-center justify-center 
+                                     shadow-lg shadow-purple-600/40"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                          </svg>
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setSelectedItem(item)}
+                        className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 
+                                   active:scale-95 transition flex items-center justify-center 
+                                   shadow-lg shadow-blue-600/40"
+                      >
+                        <Plus size={22} className="text-white" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

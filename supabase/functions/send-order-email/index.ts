@@ -62,14 +62,14 @@ serve(async (req: Request): Promise<Response> => {
 
             <td align="left" style="padding:10px 0; font-size:14px;">
               <strong>${item.name}</strong>
+              ${item.restaurant_name ? `<br/><span style="color:#9333ea;">📍 ${item.restaurant_name}</span>` : ""}
               ${item.notes ? `<br/><em>📝 ${item.notes}</em>` : ""}
-              ${
-                item.modifiers
-                  ? `<br/><span style="color:#777;">Options: ${Object.keys(item.modifiers)
-                      .filter((k) => item.modifiers[k])
-                      .join(", ")}</span>`
-                  : ""
-              }
+              ${item.modifiers
+            ? `<br/><span style="color:#777;">Options: ${Object.keys(item.modifiers)
+              .filter((k) => item.modifiers[k])
+              .join(", ")}</span>`
+            : ""
+          }
               <br/>
               <span style="color:#666;">€${item.price.toFixed(2)} each</span>
             </td>
@@ -124,7 +124,7 @@ serve(async (req: Request): Promise<Response> => {
         Send the email
     --------------------------------------------------------- */
     const subject = `🔥 New order from ${firstName} ${lastName}`; // <-- MODIFIED SUBJECT LINE
-    
+
     await resend.emails.send({
       from: "Delivery Gjilan <onboarding@resend.dev>",
       to: "artshabani2002@gmail.com",

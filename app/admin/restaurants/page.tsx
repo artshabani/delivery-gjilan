@@ -57,6 +57,9 @@ export default function AdminRestaurantsPage() {
     description: "",
     image_url: "",
     category: "",
+    opens_at: "",
+    closes_at: "",
+    is_open_24_7: false,
   });
 
   const [itemForm, setItemForm] = useState({
@@ -131,7 +134,7 @@ export default function AdminRestaurantsPage() {
 
     if (res.ok) {
       toast.success("Restaurant added!");
-      setRestForm({ name: "", description: "", image_url: "", category: "" });
+      setRestForm({ name: "", description: "", image_url: "", category: "", opens_at: "", closes_at: "", is_open_24_7: false });
       setModal(null);
       load();
     } else toast.error("Failed to add restaurant");
@@ -250,7 +253,7 @@ export default function AdminRestaurantsPage() {
   }
 
   const openCreateModal = () => {
-    setRestForm({ name: "", description: "", image_url: "", category: "" });
+    setRestForm({ name: "", description: "", image_url: "", category: "", opens_at: "", closes_at: "", is_open_24_7: false });
     setModal({ type: "create", restaurant: null });
   };
 
@@ -260,6 +263,9 @@ export default function AdminRestaurantsPage() {
       description: r.description || "",
       image_url: r.image_url || "",
       category: r.category || "",
+      opens_at: (r as any).opens_at || "",
+      closes_at: (r as any).closes_at || "",
+      is_open_24_7: (r as any).is_open_24_7 || false,
     });
     setModal({ type: "edit", restaurant: r });
   };
@@ -562,6 +568,52 @@ export default function AdminRestaurantsPage() {
                   </div>
                 )}
 
+                {/* Working Hours Section */}
+                <div className="pt-4 border-t border-slate-700">
+                  <h3 className="text-sm font-semibold text-purple-400 mb-3">Working Hours</h3>
+
+                  {/* 24/7 Checkbox */}
+                  <label className="flex items-center gap-2 mb-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={restForm.is_open_24_7}
+                      onChange={(e) =>
+                        setRestForm({ ...restForm, is_open_24_7: e.target.checked })
+                      }
+                      className="w-4 h-4 rounded bg-slate-700 border-slate-600"
+                    />
+                    <span className="text-sm text-white/70">Open 24/7</span>
+                  </label>
+
+                  {/* Time Inputs */}
+                  {!restForm.is_open_24_7 && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-sm text-white/70">Opens At</label>
+                        <input
+                          type="time"
+                          className="w-full p-2 rounded bg-slate-800 border border-slate-700"
+                          value={restForm.opens_at}
+                          onChange={(e) =>
+                            setRestForm({ ...restForm, opens_at: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm text-white/70">Closes At</label>
+                        <input
+                          type="time"
+                          className="w-full p-2 rounded bg-slate-800 border border-slate-700"
+                          value={restForm.closes_at}
+                          onChange={(e) =>
+                            setRestForm({ ...restForm, closes_at: e.target.value })
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={
                     modal.type === "create"
@@ -735,7 +787,8 @@ export default function AdminRestaurantsPage() {
             )}
           </div>
         </div>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 }

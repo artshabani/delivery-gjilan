@@ -10,6 +10,7 @@ export async function POST(req: Request) {
     price: body.price,
     description: body.description || "",
     image_url: body.image_url || "",
+    section: body.section || null,
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

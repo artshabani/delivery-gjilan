@@ -29,15 +29,21 @@ export default function ProductsPage() {
 
   /* ---------------- WAIT FOR USER ID ---------------- */
   useEffect(() => {
-    const interval = setInterval(() => {
-      const uid = localStorage.getItem("dg_user_id");
-      if (uid) {
-        setUserId(uid);
-        clearInterval(interval);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
+    // Check immediately
+    const immediateUid = localStorage.getItem("dg_user_id");
+    if (immediateUid) {
+      setUserId(immediateUid);
+    } else {
+      // Fallback to interval if not found immediately
+      const interval = setInterval(() => {
+        const uid = localStorage.getItem("dg_user_id");
+        if (uid) {
+          setUserId(uid);
+          clearInterval(interval);
+        }
+      }, 100); // Check every 100ms for faster response
+      return () => clearInterval(interval);
+    }
   }, []);
 
   /* ---------------- CHECK ADMIN ---------------- */
@@ -194,21 +200,74 @@ export default function ProductsPage() {
     if (sub) scrollToSubcategory(sub.id);
   };
 
-  /* ---------------- LOADING ---------------- */
-  if (!userId) {
+  /* ---------------- LOADING SKELETON ---------------- */
+  if (!userId || loading) {
     return (
-      <div className="min-h-screen bg-black text-white p-4">
-        Preparing your session…
+      <div className="min-h-screen w-full bg-black text-white pb-28">
+        {/* SKELETON HEADER */}
+        <div className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl px-4 pt-4 pb-4 border-b border-white/10">
+          {/* Level 1 Cats Skeleton */}
+          <div className="flex gap-3 py-2 overflow-hidden">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div
+                key={i}
+                className="h-10 w-28 bg-slate-800/50 rounded-xl animate-pulse flex-shrink-0"
+              />
+            ))}
+          </div>
+
+          {/* Level 2 Cats Skeleton */}
+          <div className="mt-3 flex gap-6 px-1 overflow-hidden">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-5 w-20 bg-slate-800/50 rounded animate-pulse flex-shrink-0"
+              />
+            ))}
+          </div>
+
+          {/* Search Skeleton */}
+          <div className="w-full flex justify-center mt-4">
+            <div className="w-full max-w-md h-11 bg-slate-800/50 rounded-xl animate-pulse" />
+          </div>
+        </div>
+
+        {/* SKELETON CONTENT */}
+        <div className="w-full max-w-[1100px] mx-auto px-4 sm:px-5 md:px-6 lg:px-8 mt-8">
+          {[1, 2].map((section) => (
+            <div key={section} className="mb-10">
+              {/* Section Title Skeleton */}
+              <div className="h-7 w-48 bg-slate-800/50 rounded mb-4 animate-pulse" />
+
+              {/* Grid Skeleton */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {[1, 2, 3, 4, 5].map((card) => (
+                  <div
+                    key={card}
+                    className="bg-slate-900/30 rounded-2xl p-3 h-[260px] border border-slate-800/50 flex flex-col animate-pulse"
+                  >
+                    {/* Image Placeholder */}
+                    <div className="w-full h-32 bg-slate-800/50 rounded-xl mb-3" />
+
+                    {/* Text Placeholders */}
+                    <div className="h-4 w-3/4 bg-slate-800/50 rounded mb-2" />
+                    <div className="h-3 w-full bg-slate-800/30 rounded mb-1" />
+                    <div className="h-3 w-1/2 bg-slate-800/30 rounded mb-4" />
+
+                    {/* Price/Button Placeholder */}
+                    <div className="mt-auto flex justify-between items-center">
+                      <div className="h-5 w-16 bg-slate-800/50 rounded" />
+                      <div className="h-8 w-8 bg-slate-800/50 rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
-
-  if (loading)
-    return (
-      <div className="min-h-screen bg-black text-white p-4">
-        Checking store availability and loading products...
-      </div>
-    );
 
   /* ---------------- RENDER ---------------- */
   return (
@@ -226,8 +285,8 @@ export default function ProductsPage() {
               window.scrollTo({ top: 0, behavior: "auto" });
             }}
             className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all shadow-lg ${activeLevel1 === 0
-                ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-purple-500/50 scale-105"
-                : "bg-slate-800/60 text-white/70 hover:bg-slate-700/60 hover:text-white"
+              ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-purple-500/50 scale-105"
+              : "bg-slate-800/60 text-white/70 hover:bg-slate-700/60 hover:text-white"
               }`}
           >
             All products
@@ -241,8 +300,8 @@ export default function ProductsPage() {
                 scrollToFirstSubOfCategory(cat.id);
               }}
               className={`px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all shadow-lg ${activeLevel1 === cat.id
-                  ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-purple-500/50 scale-105"
-                  : "bg-slate-800/60 text-white/70 hover:bg-slate-700/60 hover:text-white"
+                ? "bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-purple-500/50 scale-105"
+                : "bg-slate-800/60 text-white/70 hover:bg-slate-700/60 hover:text-white"
                 }`}
             >
               {cat.name}
@@ -258,8 +317,8 @@ export default function ProductsPage() {
                 key={sub.id}
                 onClick={() => scrollToSubcategory(sub.id)}
                 className={`relative text-sm font-medium whitespace-nowrap pb-2 transition-all ${activeLevel2 === sub.id
-                    ? "text-purple-400 font-bold"
-                    : "text-white/60 hover:text-white/90"
+                  ? "text-purple-400 font-bold"
+                  : "text-white/60 hover:text-white/90"
                   }`}
               >
                 {sub.name}

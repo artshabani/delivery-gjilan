@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ShoppingBag, Utensils, Shield, Clock } from "lucide-react";
+import { ShoppingBag, Utensils, Shield, Clock, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAdminGuard } from "@/app/hooks/useAdminGuard"
 
@@ -118,6 +118,29 @@ export default function Home() {
             <div className="flex flex-col">
               <p className="text-xl font-semibold text-white">Your Orders</p>
               <p className="text-sm text-amber-200/70">Track active & past orders</p>
+            </div>
+          </motion.div>
+        </Link>
+
+        {/* REFER A FRIEND */}
+        <Link href="/refer">
+          <motion.div
+            whileTap={{ scale: 0.97 }}
+            className="
+              w-full p-6 rounded-2xl border cursor-pointer 
+              flex items-center gap-4 transition-shadow
+              bg-gradient-to-r from-pink-600/60 to-rose-800/60
+              backdrop-blur-xl shadow-lg border-pink-300/20
+              hover:shadow-pink-500/40
+            "
+          >
+            <div className="w-14 h-14 bg-black/30 rounded-xl flex items-center justify-center">
+              <UserPlus size={32} className="text-pink-200" />
+            </div>
+
+            <div className="flex flex-col">
+              <p className="text-xl font-semibold text-white">Refer a Friend</p>
+              <p className="text-sm text-pink-200/70">Invite friends to join</p>
             </div>
           </motion.div>
         </Link>

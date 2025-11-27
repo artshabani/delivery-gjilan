@@ -21,8 +21,11 @@ export async function POST(
       name: body.name,
       description: body.description || "",
       image_url: body.image_url || "",
-      category: body.category || null,    
+      category: body.category || null,
       is_active: body.is_active ?? true,
+      opens_at: body.opens_at || null,
+      closes_at: body.closes_at || null,
+      is_open_24_7: body.is_open_24_7 ?? false,
     })
     .eq("id", restId);
 

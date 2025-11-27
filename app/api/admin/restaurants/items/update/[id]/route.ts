@@ -21,6 +21,7 @@ export async function POST(
       price: body.price,
       description: body.description,
       image_url: body.image_url,
+      section: body.section || null,
     })
     .eq("id", itemId);
 

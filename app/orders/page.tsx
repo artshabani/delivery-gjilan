@@ -160,7 +160,7 @@ export default function OrderHistoryPage() {
                                     return (
                                         <div key={item.id} className="flex items-center gap-3">
                                             <div className="w-12 h-12 bg-zinc-800 rounded-lg relative overflow-hidden flex-shrink-0">
-                                                {product?.image_url ? (
+                                                {product?.image_url && product.image_url.startsWith('http') ? (
                                                     <Image
                                                         src={product.image_url}
                                                         alt={product.name}

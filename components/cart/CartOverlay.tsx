@@ -40,9 +40,8 @@ export default function CartOverlay() {
       toast.custom(
         (t) => (
           <div
-            className={`${
-              t.visible ? "animate-enter" : "animate-leave"
-            } fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
+            className={`${t.visible ? "animate-enter" : "animate-leave"
+              } fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
               bg-slate-900 text-white px-6 py-5 rounded-2xl shadow-xl 
               border border-red-500/40 w-[92%] max-w-sm text-center`}
           >
@@ -88,6 +87,23 @@ export default function CartOverlay() {
       if (!userId || !hasMinimum) return;
 
       setPlacingOrder(true);
+
+      // Check for active orders first
+      try {
+        const res = await fetch(`/api/orders/active?user_id=${userId}`);
+        const data = await res.json();
+
+        if (data.order) {
+          setPlacingOrder(false);
+          toast.error("Ju keni nje porosi aktive! Prisni derisa te perfundoje.");
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking active orders:", err);
+        // We continue if the check fails, or you could block it. 
+        // For now, let's assume we continue or maybe show error? 
+        // Safest is to probably alert user but let's just log for now to not block if API fails.
+      }
 
       const orderPayload: any = {
         total: totalPrice,
@@ -149,6 +165,7 @@ export default function CartOverlay() {
               price: product.price,
               notes: product.notes || null,
               image_url: product.image_url,
+              restaurant_name: product.restaurant_name || null,
             })),
           }),
         }
@@ -208,6 +225,10 @@ export default function CartOverlay() {
 
               <div className="max-w-[160px]">
                 <p className="text-sm font-medium text-white">{product.name}</p>
+
+                {product.restaurant_name && (
+                  <p className="text-xs text-purple-300 mt-0.5">📍 {product.restaurant_name}</p>
+                )}
 
                 {product.notes && (
                   <p className="text-xs text-blue-300 mt-1">{product.notes}</p>

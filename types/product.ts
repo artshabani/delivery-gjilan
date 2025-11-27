@@ -9,6 +9,7 @@ export interface Product {
 
   // OPTIONAL FIELDS
   restaurant_id?: number;
+  restaurant_name?: string;
   notes?: string;
   modifiers?: Record<string, boolean>;
   type?: "grocery" | "restaurant";

@@ -20,6 +20,9 @@ export default function RestaurantDetailPage() {
     name: "",
     description: "",
     image_url: "",
+    opens_at: "",
+    closes_at: "",
+    is_open_24_7: false,
   });
 
   const [itemForm, setItemForm] = useState({
@@ -27,7 +30,15 @@ export default function RestaurantDetailPage() {
     price: "",
     description: "",
     image_url: "",
+    section: "",
   });
+
+  const sections = [
+    { name: "Breakfast", emoji: "🍳" },
+    { name: "Burgers", emoji: "🍔" },
+    { name: "Pizza", emoji: "🍕" },
+    { name: "Drinks", emoji: "🥤" },
+  ];
 
   async function load() {
     try {
@@ -44,6 +55,9 @@ export default function RestaurantDetailPage() {
         name: restData.restaurant?.name || "",
         description: restData.restaurant?.description || "",
         image_url: restData.restaurant?.image_url || "",
+        opens_at: restData.restaurant?.opens_at || "",
+        closes_at: restData.restaurant?.closes_at || "",
+        is_open_24_7: restData.restaurant?.is_open_24_7 || false,
       });
       setItems(itemsData.items);
     } catch (err) {
@@ -94,12 +108,13 @@ export default function RestaurantDetailPage() {
         price: Number(itemForm.price),
         description: itemForm.description,
         image_url: itemForm.image_url,
+        section: itemForm.section || null,
       }),
     });
 
     if (res.ok) {
       toast.success("Item added!");
-      setItemForm({ name: "", price: "", description: "", image_url: "" });
+      setItemForm({ name: "", price: "", description: "", image_url: "", section: "" });
       load();
     } else {
       toast.error("Failed to add item");
@@ -171,6 +186,52 @@ export default function RestaurantDetailPage() {
             setRestForm({ ...restForm, image_url: e.target.value })
           }
         />
+
+        {/* Working Hours Section */}
+        <div className="pt-4 border-t border-slate-700">
+          <h3 className="text-sm font-semibold text-purple-400 mb-3">Working Hours</h3>
+
+          {/* 24/7 Checkbox */}
+          <label className="flex items-center gap-2 mb-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={restForm.is_open_24_7}
+              onChange={(e) =>
+                setRestForm({ ...restForm, is_open_24_7: e.target.checked })
+              }
+              className="w-4 h-4 rounded bg-slate-700 border-slate-600"
+            />
+            <span className="text-sm text-white/70">Open 24/7</span>
+          </label>
+
+          {/* Time Inputs (disabled if 24/7) */}
+          {!restForm.is_open_24_7 && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm text-white/70">Opens At</label>
+                <input
+                  type="time"
+                  className="w-full p-2 rounded bg-slate-800 border border-slate-700"
+                  value={restForm.opens_at}
+                  onChange={(e) =>
+                    setRestForm({ ...restForm, opens_at: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className="text-sm text-white/70">Closes At</label>
+                <input
+                  type="time"
+                  className="w-full p-2 rounded bg-slate-800 border border-slate-700"
+                  value={restForm.closes_at}
+                  onChange={(e) =>
+                    setRestForm({ ...restForm, closes_at: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="bg-slate-900 border border-purple-500/20 rounded-xl p-4 space-y-3">
@@ -220,6 +281,22 @@ export default function RestaurantDetailPage() {
             setItemForm({ ...itemForm, image_url: e.target.value })
           }
         />
+
+        <label className="text-sm text-white/70">Section (Optional)</label>
+        <select
+          className="w-full p-2 rounded bg-slate-800 border border-slate-700"
+          value={itemForm.section}
+          onChange={(e) =>
+            setItemForm({ ...itemForm, section: e.target.value })
+          }
+        >
+          <option value="">No Section</option>
+          {sections.map((section) => (
+            <option key={section.name} value={section.name}>
+              {section.emoji} {section.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-3">

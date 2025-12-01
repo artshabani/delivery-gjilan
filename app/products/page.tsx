@@ -8,6 +8,24 @@ import { Product } from "@/types/product";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { fetchAvailableProducts } from "@/lib/productFetch";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { SortableItem } from "@/components/SortableItem";
+import toast from "react-hot-toast";
+import { useAdminGuard } from "@/app/hooks/useAdminGuard";
 
 export default function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -22,7 +40,8 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [visibleSubCount, setVisibleSubCount] = useState(8);
 
-  const [isAdmin, setIsAdmin] = useState(false);
+  // Use admin guard hook
+  const { allowed: isAdminGuard } = useAdminGuard();
 
   const sectionRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -46,22 +65,61 @@ export default function ProductsPage() {
     }
   }, []);
 
-  /* ---------------- CHECK ADMIN ---------------- */
-  useEffect(() => {
-    if (!userId) return;
+  /* ---------------- DND SENSORS ---------------- */
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-    async function checkAdmin() {
-      const { data } = await supabase
-        .from("user_profiles")
-        .select("is_admin")
-        .eq("id", userId)
-        .single();
+  /* ---------------- HANDLE DRAG END ---------------- */
+  async function handleDragEnd(event: DragEndEvent, categoryId: number) {
+    const { active, over } = event;
 
-      setIsAdmin(data?.is_admin === true);
+    if (!over || active.id === over.id) return;
+
+    // Filter products in this category only
+    const categoryProducts = products.filter((p) => p.category_id === categoryId);
+
+    const oldIndex = categoryProducts.findIndex((p) => p.id === active.id);
+    const newIndex = categoryProducts.findIndex((p) => p.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(categoryProducts, oldIndex, newIndex);
+
+    // Update UI immediately - merge with other categories
+    const otherProducts = products.filter((p) => p.category_id !== categoryId);
+    setProducts([...otherProducts, ...newOrder]);
+
+    // Prepare order data with new sort_order values
+    const orderData = newOrder.map((product, index) => ({
+      id: product.id,
+      sort_order: index,
+    }));
+
+    // Send to backend
+    try {
+      const res = await fetch("/api/admin/products/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: orderData }),
+      });
+
+      if (res.ok) {
+        toast.success("Product order updated!");
+      } else {
+        toast.error("Failed to update order");
+        // Reload
+        const prodData = await fetchAvailableProducts();
+        setProducts(prodData || []);
+      }
+    } catch (error) {
+      console.error("Error updating order:", error);
+      toast.error("Error updating order");
     }
-
-    checkAdmin();
-  }, [userId]);
+  }
 
   /* ---------------- FETCH PRODUCTS & CATEGORIES ---------------- */
   useEffect(() => {
@@ -342,9 +400,14 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* Admin Debug Indicator (Temporary) */}
+      {/* <div className="fixed top-20 right-4 z-50 bg-black/80 text-white p-2 rounded text-xs">
+        Admin: {isAdminGuard ? "YES" : "NO"}
+      </div> */}
+
       {/* ADMIN / USER */}
       <div className="flex justify-center gap-3 mt-3">
-        {isAdmin ? (
+        {isAdminGuard ? (
           <>
             <Link
               href="/admin/products"
@@ -391,37 +454,55 @@ export default function ProductsPage() {
             >
               <h2 className="text-xl font-semibold mb-3">{sub.name}</h2>
 
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  hidden: {},
-                  visible: {
-                    transition: { staggerChildren: 0.06 },
-                  },
-                }}
-                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => handleDragEnd(event, sub.id)}
               >
-                {subProducts.map((p) => (
+                <SortableContext
+                  items={subProducts.map((p) => p.id)}
+                  strategy={horizontalListSortingStrategy}
+                >
                   <motion.div
-                    key={p.id}
+                    initial="hidden"
+                    animate="visible"
                     variants={{
-                      hidden: { opacity: 0, y: 20 },
-                      visible: { opacity: 1, y: 0 },
-                    }}
-                    whileHover={{
-                      scale: 1.05,
-                      transition: {
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 18,
+                      hidden: {},
+                      visible: {
+                        transition: { staggerChildren: 0.06 },
                       },
                     }}
+                    className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"
                   >
-                    <ProductCard {...p} />
+                    {subProducts.map((p) => (
+                      <SortableItem key={p.id} id={p.id} disabled={!isAdminGuard}>
+                        <motion.div
+                          variants={{
+                            hidden: { opacity: 0, y: 20 },
+                            visible: { opacity: 1, y: 0 },
+                          }}
+                          whileHover={{
+                            scale: 1.05,
+                            transition: {
+                              type: "spring",
+                              stiffness: 300,
+                              damping: 18,
+                            },
+                          }}
+                          className="relative"
+                        >
+                          {isAdminGuard && (
+                            <div className="absolute top-2 left-2 z-10 bg-purple-600/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-semibold text-white border border-purple-500/50 shadow-lg cursor-grab active:cursor-grabbing">
+                              ⋮⋮ Drag
+                            </div>
+                          )}
+                          <ProductCard {...p} />
+                        </motion.div>
+                      </SortableItem>
+                    ))}
                   </motion.div>
-                ))}
-              </motion.div>
+                </SortableContext>
+              </DndContext>
             </div>
           );
         })}

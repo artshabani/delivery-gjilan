@@ -25,7 +25,9 @@ export default function RestaurantDetail() {
     { name: "Breakfast", emoji: "🍳" },
     { name: "Burgers", emoji: "🍔" },
     { name: "Pizza", emoji: "🍕" },
+    { name: "Pasta", emoji: "🍝" },
     { name: "Drinks", emoji: "🥤" },
+
   ]);
   const [showSectionManager, setShowSectionManager] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");

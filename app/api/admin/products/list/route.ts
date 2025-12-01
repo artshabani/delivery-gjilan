@@ -5,7 +5,9 @@ export async function GET() {
   const { data, error } = await adminSupabase
     .from("products")
     .select("*")
-    .order("id");
+    .order("category", { ascending: true })
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true }); // fallback
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

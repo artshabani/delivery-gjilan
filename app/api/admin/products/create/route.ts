@@ -4,28 +4,64 @@ import { adminSupabase } from "@/lib/supabase-admin";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, description, price, image_url, category_id, is_available } = body;
+    const { name, price, image_url, category_id, store_ids, store_costs } = body;
 
     if (!name || !price || !category_id) {
       return NextResponse.json({ error: "Name, price, and category are required" }, { status: 400 });
     }
 
-    const { data, error } = await adminSupabase
+    // 1. Create Product
+    const { data: product, error: productError } = await adminSupabase
       .from("products")
       .insert([{
         name,
-        description,
         price,
         image_url,
-        category_id,
-        is_available: is_available ?? true
+        category_id
       }])
       .select()
       .single();
 
-    if (error) throw error;
+    if (productError) throw productError;
 
-    return NextResponse.json({ product: data });
+    const productId = product.id;
+
+    // 2. Link to Stores (product_store_links)
+    if (store_ids && store_ids.length > 0) {
+      const links = store_ids.map((storeId: number) => ({
+        product_id: productId,
+        store_id: storeId
+      }));
+
+      const { error: linksError } = await adminSupabase
+        .from("product_store_links")
+        .insert(links);
+
+      if (linksError) {
+        console.error("Error linking stores:", linksError);
+        // We don't throw here to avoid failing the whole request if just linking fails, 
+        // but ideally we should handle this better (transaction).
+      }
+    }
+
+    // 3. Add Wholesale Costs (product_store_costs)
+    if (store_costs && store_costs.length > 0) {
+      const costs = store_costs.map((cost: any) => ({
+        product_id: productId,
+        store_id: cost.store_id,
+        wholesale_price: cost.wholesale_price
+      }));
+
+      const { error: costsError } = await adminSupabase
+        .from("product_store_costs")
+        .insert(costs);
+
+      if (costsError) {
+        console.error("Error adding costs:", costsError);
+      }
+    }
+
+    return NextResponse.json({ product });
   } catch (error: any) {
     console.error("Error creating product:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

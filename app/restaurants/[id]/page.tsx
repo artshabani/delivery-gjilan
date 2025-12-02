@@ -23,7 +23,7 @@ export default function RestaurantDetail() {
   // Section management state (admin only)
   const [sections, setSections] = useState<{ name: string, emoji: string }[]>([
     { name: "Breakfast", emoji: "🍳" },
-    { name: "Burgers", emoji: "🍔" },
+    { name: "Hamburger", emoji: "🍔" },
     { name: "Pizza", emoji: "🍕" },
     { name: "Pasta", emoji: "🍝" },
     { name: "Drinks", emoji: "🥤" },

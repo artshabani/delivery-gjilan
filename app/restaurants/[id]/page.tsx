@@ -21,19 +21,26 @@ export default function RestaurantDetail() {
   const { allowed: isAdmin } = useAdminGuard();
 
   // Section management state (admin only)
-  const [sections, setSections] = useState<{ name: string, emoji: string }[]>([
-    { name: "Breakfast", emoji: "🍳" },
-    { name: "Hamburger", emoji: "🍔" },
-    { name: "Pizza", emoji: "🍕" },
-    { name: "Pasta", emoji: "🍝" },
-    { name: "Drinks", emoji: "🥤" },
-
-  ]);
+  const [sections, setSections] = useState<{ id: number, name: string, emoji: string }[]>([]);
   const [showSectionManager, setShowSectionManager] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
   const [newSectionEmoji, setNewSectionEmoji] = useState("🍽️");
-  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editingSection, setEditingSection] = useState<number | null>(null);
   const [editSectionForm, setEditSectionForm] = useState({ name: "", emoji: "" });
+
+  // Bulk Assignment State
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<number>>(new Set());
+
+  const toggleSelection = (id: number) => {
+    const newSet = new Set(selectedItemIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedItemIds(newSet);
+  };
+
+  // Section filter state
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState<string | null>(null);
 
   // Item creation/editing state (admin only)
   const [showAddItem, setShowAddItem] = useState(false);
@@ -161,38 +168,176 @@ export default function RestaurantDetail() {
     }
   }
 
-  // Update section name/emoji
-  async function updateSection(oldName: string, newName: string, newEmoji: string) {
-    // 1. Update local sections state
-    const sectionExists = sections.find(s => s.name === oldName);
+  // Load sections from DB
+  async function loadSections() {
+    try {
+      const res = await fetch(`/api/admin/restaurants/sections/list?restaurant_id=${restaurantId}`);
+      const data = await res.json();
+      if (data.sections) setSections(data.sections);
+    } catch (err) {
+      console.error("Failed to load sections", err);
+    }
+  }
 
-    if (sectionExists) {
-      // If it was in our hardcoded list, update it there
-      setSections(sections.map(s =>
-        s.name === oldName ? { name: newName, emoji: newEmoji } : s
-      ));
+  // Add new section
+  async function addSection() {
+    if (!newSectionName.trim()) return;
+
+    const res = await fetch("/api/admin/restaurants/sections/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        restaurant_id: restaurantId,
+        name: newSectionName,
+        emoji: newSectionEmoji
+      })
+    });
+
+    if (res.ok) {
+      toast.success("Section added");
+      setNewSectionName("");
+      setNewSectionEmoji("🍽️");
+      loadSections();
     } else {
-      // If it was dynamic, add it to our list so the emoji persists for this session
-      setSections([...sections, { name: newName, emoji: newEmoji }]);
+      toast.error("Failed to add section");
+    }
+  }
+
+  // Migrate orphaned sections
+  async function migrateOrphanedSections() {
+    // Calculate orphaned sections from current items
+    const uniqueSectionNames = Array.from(
+      new Set(items.filter(item => item.section).map(item => item.section))
+    );
+    const orphanedNames = uniqueSectionNames.filter(name => !sections.find(s => s.name === name));
+
+    if (orphanedNames.length === 0) {
+      toast.error("No orphaned sections to migrate");
+      return;
     }
 
-    // 2. Find all items in this section
-    const itemsToUpdate = items.filter(item => item.section === oldName);
+    const toastId = toast.loading(`Migrating ${orphanedNames.length} section(s)...`);
 
-    // 3. Update all items in DB (without refreshing list each time)
-    const updatePromises = itemsToUpdate.map(item =>
-      updateItemSection(item.id, newName, false)
+    try {
+      const promises = orphanedNames.map(name =>
+        fetch("/api/admin/restaurants/sections/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            restaurant_id: restaurantId,
+            name: name,
+            emoji: "🍽️"
+          })
+        })
+      );
+
+      await Promise.all(promises);
+
+      toast.dismiss(toastId);
+      toast.success(`Migrated ${orphanedNames.length} section(s)!`);
+      loadSections();
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error("Failed to migrate sections");
+      console.error(err);
+    }
+  }
+
+  // Update section name/emoji
+  async function updateSection(id: number, oldName: string, newName: string, newEmoji: string) {
+    const res = await fetch(`/api/admin/restaurants/sections/update/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName, emoji: newEmoji, old_name: oldName })
+    });
+
+    if (res.ok) {
+      toast.success("Section updated");
+      setEditingSection(null);
+      loadSections();
+      // Reload items because their section names might have changed
+      const itemsRes = await fetch(`/api/admin/restaurants/items/list?restaurant_id=${restaurantId}`);
+      const itemsData = await itemsRes.json();
+      setItems(itemsData.items || []);
+    } else {
+      toast.error("Failed to update section");
+    }
+  }
+
+  // Delete section
+  async function deleteSection(id: number) {
+    if (!confirm("Delete this section and unassign all its items?")) return;
+
+    const res = await fetch(`/api/admin/restaurants/sections/delete/${id}`, {
+      method: "DELETE"
+    });
+
+    if (res.ok) {
+      toast.success("Section deleted");
+      loadSections();
+      // Reload items to see them unassigned
+      const itemsRes = await fetch(`/api/admin/restaurants/items/list?restaurant_id=${restaurantId}`);
+      const itemsData = await itemsRes.json();
+      setItems(itemsData.items || []);
+    } else {
+      toast.error("Failed to delete section");
+    }
+  }
+
+  // Move section up or down
+  async function moveSection(index: number, direction: 'up' | 'down') {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === sections.length - 1) return;
+
+    const newSections = [...sections];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+    // Swap
+    [newSections[index], newSections[targetIndex]] = [newSections[targetIndex], newSections[index]];
+
+    // Update local state immediately for smooth UX
+    setSections(newSections);
+
+    // Save to database
+    const sectionIds = newSections.map(s => s.id);
+
+    const res = await fetch("/api/admin/restaurants/sections/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        restaurant_id: restaurantId,
+        section_ids: sectionIds
+      })
+    });
+
+    if (!res.ok) {
+      toast.error("Failed to reorder sections");
+      loadSections(); // Reload on error
+    }
+  }
+
+  // Bulk Assign
+  async function bulkAssign(sectionName: string) {
+    if (selectedItemIds.size === 0) return;
+
+    const toastId = toast.loading("Assigning items...");
+
+    const promises = Array.from(selectedItemIds).map(id =>
+      updateItemSection(id, sectionName, false)
     );
 
-    await Promise.all(updatePromises);
+    await Promise.all(promises);
 
-    // 4. Reload items once at the end
+    toast.dismiss(toastId);
+    toast.success(`Moved ${selectedItemIds.size} items to ${sectionName}`);
+
+    setSelectionMode(false);
+    setSelectedItemIds(new Set());
+
+    // Reload items
     const itemsRes = await fetch(`/api/admin/restaurants/items/list?restaurant_id=${restaurantId}`);
     const itemsData = await itemsRes.json();
     setItems(itemsData.items || []);
-
-    setEditingSection(null);
-    toast.success("Section updated!");
   }
 
   // Load sections from localStorage (This part is now removed as per instruction)
@@ -241,6 +386,9 @@ export default function RestaurantDetail() {
 
         setRestaurant(restData.restaurant || null);
         setItems(itemsData.items || []);
+
+        // Load sections
+        loadSections();
       } catch (err) {
         console.error(err);
       } finally {
@@ -260,7 +408,7 @@ export default function RestaurantDetail() {
   );
 
   // Merge with hardcoded sections for admin management
-  const allSections = [
+  const allSections: { id?: number, name: string, emoji: string }[] = [
     ...sections,
     ...uniqueSectionNames
       .filter(name => !sections.find(s => s.name === name))
@@ -273,7 +421,8 @@ export default function RestaurantDetail() {
       ...section,
       items: items.filter(item => item.section === section.name)
     }))
-    .filter(section => section.items.length > 0);
+    .filter(section => section.items.length > 0)
+    .filter(section => !selectedSectionFilter || section.name === selectedSectionFilter);
 
   // Unassigned items
   const unassignedItems = items.filter(item => !item.section);
@@ -301,8 +450,46 @@ export default function RestaurantDetail() {
               >
                 {showAddItem ? "Hide" : "Add"} Item
               </button>
+              <button
+                onClick={() => {
+                  setSelectionMode(!selectionMode);
+                  setSelectedItemIds(new Set());
+                }}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${selectionMode ? "bg-blue-500 text-white" : "bg-slate-800 text-white/70 hover:text-white"}`}
+              >
+                {selectionMode ? "Cancel Selection" : "Bulk Edit"}
+              </button>
             </div>
           )}
+        </div>
+
+        {/* SECTION FILTERS */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide sm:justify-center">
+          <button
+            onClick={() => setSelectedSectionFilter(null)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition whitespace-nowrap border border-transparent
+              ${!selectedSectionFilter
+                ? "bg-white text-black"
+                : "bg-slate-900/50 border-slate-700 text-white hover:bg-slate-800"}`}
+          >
+            All
+          </button>
+
+          {allSections.map((section) => (
+            <button
+              key={section.name}
+              onClick={() => setSelectedSectionFilter(
+                selectedSectionFilter === section.name ? null : section.name
+              )}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition whitespace-nowrap border border-transparent
+                ${selectedSectionFilter === section.name
+                  ? "bg-white text-black"
+                  : "bg-slate-900/50 border-slate-700 text-white hover:bg-slate-800"}`}
+            >
+              <span>{section.emoji}</span>
+              <span>{section.name}</span>
+            </button>
+          ))}
         </div>
 
         {/* SECTION MANAGER - Admin Only */}
@@ -330,13 +517,7 @@ export default function RestaurantDetail() {
                   className="flex-1 px-3 py-2 bg-slate-700 rounded-lg"
                 />
                 <button
-                  onClick={() => {
-                    if (newSectionName.trim()) {
-                      setSections([...sections, { name: newSectionName, emoji: newSectionEmoji }]);
-                      setNewSectionName("");
-                      setNewSectionEmoji("🍽️");
-                    }
-                  }}
+                  onClick={addSection}
                   className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg font-semibold"
                 >
                   Add
@@ -347,9 +528,32 @@ export default function RestaurantDetail() {
             {/* Existing Sections */}
             <div className="space-y-2">
               <p className="text-sm font-semibold mb-2">Existing Sections</p>
-              {allSections.map((section, idx) => (
+
+              {/* Show orphaned sections warning */}
+              {uniqueSectionNames.filter(name => !sections.find(s => s.name === name)).length > 0 && (
+                <div className="mb-3 p-3 bg-yellow-900/30 border border-yellow-700/50 rounded-lg">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm text-yellow-200 flex-1">
+                      ⚠️ Found {uniqueSectionNames.filter(name => !sections.find(s => s.name === name)).length} orphaned section(s) from old items:
+                      <span className="font-semibold"> {uniqueSectionNames.filter(name => !sections.find(s => s.name === name)).join(", ")}</span>
+                    </p>
+                    <button
+                      onClick={migrateOrphanedSections}
+                      className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-sm font-semibold whitespace-nowrap transition"
+                    >
+                      Migrate All
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {sections.length === 0 && (
+                <p className="text-sm text-white/60 py-4">No sections yet. Add one above!</p>
+              )}
+
+              {sections.map((section, idx) => (
                 <div key={idx} className="flex items-center gap-2 p-3 bg-slate-800/50 rounded-lg">
-                  {editingSection === section.name ? (
+                  {editingSection === section.id ? (
                     // Edit mode
                     <>
                       <input
@@ -368,7 +572,7 @@ export default function RestaurantDetail() {
                       <button
                         onClick={() => {
                           if (editSectionForm.name.trim()) {
-                            updateSection(section.name, editSectionForm.name, editSectionForm.emoji);
+                            updateSection(section.id!, section.name, editSectionForm.name, editSectionForm.emoji);
                           }
                         }}
                         className="px-3 py-1 bg-green-600 hover:bg-green-500 rounded text-sm"
@@ -385,25 +589,41 @@ export default function RestaurantDetail() {
                   ) : (
                     // View mode
                     <>
+                      {/* Reorder buttons */}
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          onClick={() => moveSection(idx, 'up')}
+                          disabled={idx === 0}
+                          className="px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Move up"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          onClick={() => moveSection(idx, 'down')}
+                          disabled={idx === sections.length - 1}
+                          className="px-1.5 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+                          title="Move down"
+                        >
+                          ▼
+                        </button>
+                      </div>
+
                       <span className="flex-1">{section.emoji} {section.name}</span>
                       <button
                         onClick={() => {
-                          setEditingSection(section.name);
-                          setEditSectionForm({ name: section.name, emoji: section.emoji });
+                          if (section.id) {
+                            setEditingSection(section.id);
+                            setEditSectionForm({ name: section.name, emoji: section.emoji });
+                          }
                         }}
                         className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-sm"
                       >
                         Edit
                       </button>
                       <button
-                        onClick={async () => {
-                          // Remove section from hardcoded list if it exists there
-                          setSections(sections.filter(s => s.name !== section.name));
-                          // Unassign all items with this section
-                          const itemsToUnassign = items.filter(item => item.section === section.name);
-                          for (const item of itemsToUnassign) {
-                            await updateItemSection(item.id, null);
-                          }
+                        onClick={() => {
+                          if (section.id) deleteSection(section.id);
                         }}
                         className="px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-sm"
                       >
@@ -534,14 +754,23 @@ export default function RestaurantDetail() {
                     </select>
                   </div>
 
-                  <button
-                    onClick={() => setSelectedItem(item)}
-                    className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 
-                               active:scale-95 transition flex items-center justify-center 
-                               shadow-lg shadow-blue-600/40"
-                  >
-                    <Plus size={22} className="text-white" />
-                  </button>
+                  {selectionMode ? (
+                    <div
+                      onClick={() => toggleSelection(item.id)}
+                      className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center cursor-pointer ${selectedItemIds.has(item.id) ? "bg-blue-500 border-blue-500" : "border-slate-600"}`}
+                    >
+                      {selectedItemIds.has(item.id) && <span className="text-white">✓</span>}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setSelectedItem(item)}
+                      className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 
+                                 active:scale-95 transition flex items-center justify-center 
+                                 shadow-lg shadow-blue-600/40"
+                    >
+                      <Plus size={22} className="text-white" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -576,8 +805,17 @@ export default function RestaurantDetail() {
                       </p>
                     </div>
 
-                    <div className="flex gap-2">
-                      {isAdmin && (
+                    <div className="flex gap-2 items-center">
+                      {selectionMode && (
+                        <div
+                          onClick={() => toggleSelection(item.id)}
+                          className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center cursor-pointer ${selectedItemIds.has(item.id) ? "bg-blue-500 border-blue-500" : "border-slate-600"}`}
+                        >
+                          {selectedItemIds.has(item.id) && <span className="text-white">✓</span>}
+                        </div>
+                      )}
+
+                      {!selectionMode && isAdmin && (
                         <button
                           onClick={() => {
                             setEditingItemId(item.id);
@@ -601,14 +839,17 @@ export default function RestaurantDetail() {
                           </svg>
                         </button>
                       )}
-                      <button
-                        onClick={() => setSelectedItem(item)}
-                        className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 
-                                   active:scale-95 transition flex items-center justify-center 
-                                   shadow-lg shadow-blue-600/40"
-                      >
-                        <Plus size={22} className="text-white" />
-                      </button>
+
+                      {!selectionMode && (
+                        <button
+                          onClick={() => setSelectedItem(item)}
+                          className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 
+                                     active:scale-95 transition flex items-center justify-center 
+                                     shadow-lg shadow-blue-600/40"
+                        >
+                          <Plus size={22} className="text-white" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -628,9 +869,38 @@ export default function RestaurantDetail() {
         )}
 
       </div>
+
+      {/* BULK ACTION BAR */}
+      {selectionMode && selectedItemIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-2xl z-50 flex items-center gap-4 animate-in slide-in-from-bottom-10">
+          <span className="font-semibold text-white">{selectedItemIds.size} items selected</span>
+
+          <select
+            className="bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-sm"
+            onChange={(e) => {
+              if (e.target.value) bulkAssign(e.target.value);
+            }}
+            value=""
+          >
+            <option value="">Move to section...</option>
+            {allSections.map(s => (
+              <option key={s.name} value={s.name}>{s.emoji} {s.name}</option>
+            ))}
+          </select>
+
+          <button
+            onClick={() => setSelectedItemIds(new Set())}
+            className="text-white/60 hover:text-white text-sm"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
     </div >
   );
 }
+
 
 /* ----------------------------------------------------
       ITEM MODAL — CLEANER + BLUE THEME

@@ -252,6 +252,38 @@ export default function AdminRestaurantsPage() {
     } else toast.error("Failed to delete restaurant");
   }
 
+  async function migrateAllSections() {
+    const confirmed = confirm(
+      "This will migrate all orphaned sections for ALL restaurants. Continue?"
+    );
+
+    if (!confirmed) return;
+
+    const toastId = toast.loading("Migrating sections for all restaurants...");
+
+    try {
+      const res = await fetch("/api/admin/restaurants/sections/migrate-all", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      toast.dismiss(toastId);
+
+      if (res.ok) {
+        toast.success(
+          `Successfully migrated ${data.totalMigrated} section(s) across ${data.results.length} restaurant(s)!`
+        );
+      } else {
+        toast.error(data.error || "Failed to migrate sections");
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error("Error migrating sections");
+      console.error(err);
+    }
+  }
+
   const openCreateModal = () => {
     setRestForm({ name: "", description: "", image_url: "", category: "", opens_at: "", closes_at: "", is_open_24_7: false });
     setModal({ type: "create", restaurant: null });
@@ -316,12 +348,26 @@ export default function AdminRestaurantsPage() {
           <h1 className="text-4xl font-bold text-purple-300">Restaurants</h1>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 font-semibold shadow-lg"
-        >
-          <Plus size={18} /> Add Restaurant
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={migrateAllSections}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700 font-semibold shadow-lg"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            Migrate All Sections
+          </button>
+
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 font-semibold shadow-lg"
+          >
+            <Plus size={18} /> Add Restaurant
+          </button>
+        </div>
       </div>
 
       {/* SEARCH */}

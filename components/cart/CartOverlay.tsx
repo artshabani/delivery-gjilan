@@ -46,10 +46,10 @@ export default function CartOverlay() {
               border border-red-500/40 w-[92%] max-w-sm text-center`}
           >
             <p className="text-lg font-semibold text-red-400 mb-2">
-              User Not Found
+              Nuk u gjet perdoruesi
             </p>
             <p className="text-white/80 text-sm leading-relaxed">
-              Nuk u gjet useri. Ju lutem skenoni QR CODE tuaj personal ose kontakto <br />
+              Nuk u gjet perdoruesi. Ju lutem skenoni QR CODE tuaj personal ose kontakto <br />
               <strong>045-205-045</strong>.
             </p>
           </div>
@@ -195,7 +195,7 @@ export default function CartOverlay() {
   const cartBody = (
     <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
       {cartItems.length === 0 && (
-        <p className="text-sm text-white/60">Your cart is empty.</p>
+        <p className="text-sm text-white/60">Shporta juaj eshte e zbrazet.</p>
       )}
 
       {cartItems.map(({ product, quantity }) => {
@@ -211,17 +211,16 @@ export default function CartOverlay() {
           >
             <div className="flex items-center gap-3">
               <div className="relative w-12 h-12 rounded-lg bg-slate-900 overflow-hidden">
-                <Image
-                  src={
-                    product.image_url?.startsWith("http")
-                      ? product.image_url
-                      : "/fallback.jpg"
-                  }
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                />
+                {product.image_url?.startsWith("http") && (
+                  <Image
+                    src={product.image_url}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                  />
+                )}
               </div>
+
 
               <div className="max-w-[160px]">
                 <p className="text-sm font-medium text-white">{product.name}</p>
@@ -237,7 +236,7 @@ export default function CartOverlay() {
                 {product.is_on_sale && product.sale_price ? (
                   <div className="flex flex-col leading-tight mt-1">
                     <span className="text-green-400 font-semibold text-xs">
-                      €{product.sale_price.toFixed(2)} each
+                      €{product.sale_price.toFixed(2)} copa
                     </span>
                     <span className="text-red-400 text-[11px] line-through opacity-70">
                       €{product.price.toFixed(2)}
@@ -245,7 +244,7 @@ export default function CartOverlay() {
                   </div>
                 ) : (
                   <p className="text-xs text-white/50">
-                    €{product.price.toFixed(2)} each
+                    €{product.price.toFixed(2)} copa
                   </p>
                 )}
               </div>
@@ -292,7 +291,7 @@ export default function CartOverlay() {
               <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm font-semibold">
                 {totalQuantity}
               </span>
-              View order
+              Shikoni porosine
             </span>
 
             <span className="text-base font-bold text-white">
@@ -313,7 +312,7 @@ export default function CartOverlay() {
           <div className="relative z-10 w-[92%] max-w-md cart-border-track-blue">
             <div className="bg-slate-900 rounded-2xl shadow-2xl p-4 flex flex-col max-h-[80vh]">
               <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-semibold text-white">Your cart</h2>
+                <h2 className="text-lg font-semibold text-white">Shporta juaj</h2>
                 <button
                   onClick={() => setIsCartOpen(false)}
                   className="w-7 h-7 bg-slate-800 rounded-full text-white flex items-center justify-center"
@@ -337,7 +336,7 @@ export default function CartOverlay() {
                   <div className="flex justify-between items-center text-yellow-300">
                     <span className="text-sm flex items-center gap-1.5">
                       <Info size={16} />
-                      Order from 2 restaurants fee
+                      Tarifa per porosi nga 2 vende te ndryshme
                     </span>
                     <span className="text-sm">+€{restaurantMixFee.toFixed(2)}</span>
                   </div>
@@ -356,7 +355,7 @@ export default function CartOverlay() {
                   onClick={() => setConfirmClearOpen(true)}
                   className="flex-1 py-2 bg-red-600/80 rounded-xl text-white"
                 >
-                  Clear Cart
+                  Fshini shporten
                 </button>
 
                 <button
@@ -369,7 +368,7 @@ export default function CartOverlay() {
                   }}
                   className="flex-1 py-2 bg-blue-600 rounded-xl text-white font-semibold"
                 >
-                  Order
+                  Porosit
                 </button>
               </div>
             </div>
@@ -387,10 +386,10 @@ export default function CartOverlay() {
 
           <div className="relative z-[1000] w-[85%] max-w-sm bg-slate-900 rounded-xl p-5 text-center shadow-xl">
             <h2 className="text-lg font-semibold text-white mb-3">
-              Clear Cart?
+              Fshini shporten?
             </h2>
             <p className="text-white/70 text-sm mb-5">
-              Are you sure you want to remove all items?
+              A jeni te sigurte qe doni te fshini shporten?
             </p>
 
             <div className="flex gap-3">
@@ -429,7 +428,7 @@ export default function CartOverlay() {
               Confirm Order
             </h2>
             <p className="text-white/70 text-sm mb-5">
-              Are you sure you want to place the order?
+              A jeni te sigurt qe doni te porosisni?
             </p>
 
             <div className="flex gap-3">

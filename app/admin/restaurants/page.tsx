@@ -375,7 +375,7 @@ export default function AdminRestaurantsPage() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search restaurants..."
+          placeholder="Kerko restaurante..."
           className="w-full p-3 rounded-2xl bg-slate-900/60 border border-slate-800 text-white"
         />
       </div>

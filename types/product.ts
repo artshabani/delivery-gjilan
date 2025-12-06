@@ -17,4 +17,5 @@ export interface Product {
   sale_price?: number;
   is_restaurant_extra?: boolean;
   restaurant_price?: number;
+  extra_sort_order?: number;
 }

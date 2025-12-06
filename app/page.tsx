@@ -45,7 +45,7 @@ export default function Home() {
         className="text-3xl font-bold mb-10 text-center"
         style={{ color: "#90FFCC" }}
       >
-        {name ? `What do you need today, ${name}?` : "What do you need today?"}
+        {name ? `Cka ju nevojitet sot ${name}?` : "Cka ju nevojitet sot?"}
       </motion.h1>
 
       {/* BUTTONS */}
@@ -68,9 +68,9 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col">
-              <p className="text-xl font-semibold text-white">Groceries</p>
+              <p className="text-xl font-semibold text-white">Produkte</p>
               <p className="text-sm text-purple-200/70">
-                Snacks, drinks, essentials
+                Produkte ushqimore, pije, etj.
               </p>
             </div>
           </motion.div>
@@ -93,8 +93,8 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col">
-              <p className="text-xl font-semibold text-white">Food</p>
-              <p className="text-sm text-blue-200/70">Restaurants & fast food</p>
+              <p className="text-xl font-semibold text-white">Restaurante</p>
+              <p className="text-sm text-blue-200/70">Restaurante & fast food</p>
             </div>
           </motion.div>
         </Link>
@@ -116,8 +116,8 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col">
-              <p className="text-xl font-semibold text-white">Your Orders</p>
-              <p className="text-sm text-amber-200/70">Track active & past orders</p>
+              <p className="text-xl font-semibold text-white">Historia e porosive</p>
+              <p className="text-sm text-amber-200/70">Gjurmo porosine</p>
             </div>
           </motion.div>
         </Link>
@@ -139,8 +139,8 @@ export default function Home() {
             </div>
 
             <div className="flex flex-col">
-              <p className="text-xl font-semibold text-white">Refer a Friend</p>
-              <p className="text-sm text-pink-200/70">Invite friends to join</p>
+              <p className="text-xl font-semibold text-white">Refero miqte</p>
+              <p className="text-sm text-pink-200/70">Fto miqte</p>
             </div>
           </motion.div>
         </Link>

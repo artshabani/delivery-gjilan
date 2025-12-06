@@ -160,7 +160,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
         <input
           type="number"
           className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
-          placeholder="Price"
+          placeholder="Cmimi"
           value={form.price}
           onChange={(e) => setForm({ ...form, price: e.target.value })}
         />

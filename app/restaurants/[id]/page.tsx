@@ -11,6 +11,23 @@ import { Product } from "@/types/product";
 
 import { useAdminGuard } from "@/app/hooks/useAdminGuard";
 
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { SortableItem } from "@/components/SortableItem";
+
 export default function RestaurantDetail() {
   const { id } = useParams();
   const restaurantId = Number(id);
@@ -58,6 +75,52 @@ export default function RestaurantDetail() {
   });
 
   const { addItem } = useCart();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  async function handleDragEndExtras(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = internalProducts.findIndex((p) => p.id === active.id);
+    const newIndex = internalProducts.findIndex((p) => p.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newOrder = arrayMove(internalProducts, oldIndex, newIndex);
+    setInternalProducts(newOrder);
+
+    // Prepare order data
+    const orderData = newOrder.map((product, index) => ({
+      id: product.id,
+      sort_order: index,
+    }));
+
+    // Send to backend
+    try {
+      await fetch("/api/admin/products/reorder-extras", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: orderData }),
+      });
+      toast.success("Order updated");
+    } catch (error) {
+      console.error("Error updating order:", error);
+      toast.error("Failed to update order");
+    }
+  }
+
+
 
   // Function to update item section in database
   async function updateItemSection(itemId: number, section: string | null, refresh: boolean = true) {
@@ -399,6 +462,7 @@ export default function RestaurantDetail() {
           .from("products")
           .select("*")
           .eq("is_restaurant_extra", true)
+          .order("extra_sort_order", { ascending: true, nullsFirst: false })
           .limit(20);
         
         if (prodData) {
@@ -797,20 +861,33 @@ export default function RestaurantDetail() {
           <div className="mb-10">
             <div className="flex items-center gap-3 mb-4">
               <span className="text-3xl">🥤</span>
-              <h2 className="text-2xl font-bold text-white">Drinks & Extras</h2>
+              <h2 className="text-2xl font-bold text-white">Pijet</h2>
               <div className="flex-1 h-px bg-gradient-to-r from-slate-700 to-transparent"></div>
             </div>
             
-            <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide">
-              {internalProducts.map((product) => (
-                <div key={product.id} className="w-[160px] flex-shrink-0">
-                  <ProductCard 
-                    {...product} 
-                    price={product.restaurant_price || product.price}
-                  />
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEndExtras}
+            >
+              <SortableContext
+                items={internalProducts.map((p) => p.id)}
+                strategy={horizontalListSortingStrategy}
+              >
+                <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide">
+                  {internalProducts.map((product) => (
+                    <SortableItem key={product.id} id={product.id} disabled={!isAdmin} className="flex-shrink-0">
+                      <div className="w-[120px] transform transition-transform active:scale-95">
+                        <ProductCard 
+                          {...product} 
+                          price={product.restaurant_price || product.price}
+                        />
+                      </div>
+                    </SortableItem>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           </div>
         )}
 

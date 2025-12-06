@@ -123,7 +123,7 @@ export default function AdminProductsPage() {
       {/* SEARCH */}
       <input
         type="text"
-        placeholder="Search products..."
+        placeholder="Kerko produkte..."
         className="w-full mb-4 p-2 rounded bg-gray-800 border border-gray-700 text-white"
         value={search}
         onChange={(e) => setSearch(e.target.value)}

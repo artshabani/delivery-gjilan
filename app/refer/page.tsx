@@ -109,7 +109,7 @@ export default function ReferFriendPage() {
                             type="text"
                             value={friendFirstName}
                             onChange={(e) => setFriendFirstName(e.target.value)}
-                            placeholder="John"
+                            placeholder="Artan"
                             required
                             className="w-full px-4 py-3 rounded-xl bg-slate-800/50 text-white border border-slate-700 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
                         />
@@ -124,7 +124,7 @@ export default function ReferFriendPage() {
                             type="text"
                             value={friendLastName}
                             onChange={(e) => setFriendLastName(e.target.value)}
-                            placeholder="Doe"
+                            placeholder="Nuhiu"
                             required
                             className="w-full px-4 py-3 rounded-xl bg-slate-800/50 text-white border border-slate-700 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition"
                         />

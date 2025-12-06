@@ -186,7 +186,7 @@ export default function RestaurantsPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search restaurants…"
+            placeholder="Kerko restaurante…"
             className="w-full p-3 rounded-2xl bg-slate-900 border border-slate-800 
                        text-white placeholder-white/40 shadow focus:outline-none
                        focus:ring-2 focus:ring-blue-600 transition"

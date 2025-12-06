@@ -56,7 +56,7 @@ export default function ItemModal({ item, onClose }: any) {
           className="w-full mt-4 p-3 bg-white/5 rounded-xl text-white 
                      placeholder-white/40 border border-white/10 
                      focus:border-mint-300 outline-none resize-none"
-          placeholder="Notes (optional)…"
+          placeholder="Instruksione te metejshme..."
           rows={2}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}

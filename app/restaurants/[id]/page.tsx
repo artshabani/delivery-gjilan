@@ -6,6 +6,8 @@ import { Plus, X } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
+import ProductCard from "@/components/ProductCard";
+import { Product } from "@/types/product";
 
 import { useAdminGuard } from "@/app/hooks/useAdminGuard";
 
@@ -15,6 +17,7 @@ export default function RestaurantDetail() {
 
   const [restaurant, setRestaurant] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
+  const [internalProducts, setInternalProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<any>(null);
 
@@ -389,6 +392,18 @@ export default function RestaurantDetail() {
 
         // Load sections
         loadSections();
+
+        // Fetch internal products (cross-sell)
+        // Filter by is_restaurant_extra = true
+        const { data: prodData } = await supabase
+          .from("products")
+          .select("*")
+          .eq("is_restaurant_extra", true)
+          .limit(20);
+        
+        if (prodData) {
+          setInternalProducts(prodData);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -771,6 +786,28 @@ export default function RestaurantDetail() {
                       <Plus size={22} className="text-white" />
                     </button>
                   )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* INTERNAL STORE PRODUCTS (CROSS-SELL) */}
+        {internalProducts.length > 0 && (
+          <div className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-3xl">🥤</span>
+              <h2 className="text-2xl font-bold text-white">Drinks & Extras</h2>
+              <div className="flex-1 h-px bg-gradient-to-r from-slate-700 to-transparent"></div>
+            </div>
+            
+            <div className="flex gap-4 overflow-x-auto pb-6 scrollbar-hide">
+              {internalProducts.map((product) => (
+                <div key={product.id} className="w-[160px] flex-shrink-0">
+                  <ProductCard 
+                    {...product} 
+                    price={product.restaurant_price || product.price}
+                  />
                 </div>
               ))}
             </div>

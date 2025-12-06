@@ -4,7 +4,7 @@ import { adminSupabase } from "@/lib/supabase-admin";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, price, image_url, category_id, store_ids, store_costs } = body;
+    const { name, price, image_url, category_id, store_ids, store_costs, is_restaurant_extra, restaurant_price } = body;
 
     if (!name || !price || !category_id) {
       return NextResponse.json({ error: "Name, price, and category are required" }, { status: 400 });
@@ -17,7 +17,9 @@ export async function POST(req: NextRequest) {
         name,
         price,
         image_url,
-        category_id
+        category_id,
+        is_restaurant_extra: is_restaurant_extra ?? false,
+        restaurant_price
       }])
       .select()
       .single();

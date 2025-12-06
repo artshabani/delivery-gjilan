@@ -23,8 +23,10 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
   const [form, setForm] = useState({
     name: "",
     price: "",
+    restaurant_price: "",
     category_id: "",
     image_url: "",
+    is_restaurant_extra: false,
   });
 
   const [selectedStores, setSelectedStores] = useState<number[]>([]);
@@ -122,6 +124,8 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
           store_ids: selectedStores,
           store_costs: storeCosts,
           in_stock: true,
+          is_restaurant_extra: form.is_restaurant_extra,
+          restaurant_price: form.restaurant_price ? Number(form.restaurant_price) : null,
         }),
       });
 
@@ -160,6 +164,17 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
           value={form.price}
           onChange={(e) => setForm({ ...form, price: e.target.value })}
         />
+
+        {/* RESTAURANT PRICE */}
+        {form.is_restaurant_extra && (
+          <input
+            type="number"
+            className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
+            placeholder="Restaurant Price (Optional)"
+            value={form.restaurant_price}
+            onChange={(e) => setForm({ ...form, restaurant_price: e.target.value })}
+          />
+        )}
 
         {/* CATEGORIES */}
         <select
@@ -265,6 +280,19 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
             className="w-20 h-20 rounded border border-gray-600 object-cover"
           />
         )}
+
+        {/* RESTAURANT EXTRA CHECKBOX */}
+        <label className="flex items-center gap-2 p-2 bg-gray-700/30 rounded cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.is_restaurant_extra}
+            onChange={(e) => setForm({ ...form, is_restaurant_extra: e.target.checked })}
+            className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
+          />
+          <span className="text-sm font-medium text-gray-200">
+            Show in Restaurant Extras (Drinks & Extras)
+          </span>
+        </label>
 
         {/* ERROR MESSAGE */}
         {error && <p className="text-red-400 text-sm">{error}</p>}

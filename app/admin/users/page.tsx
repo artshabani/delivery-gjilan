@@ -35,6 +35,8 @@ export default function AdminUsers() {
   const [editAddress, setEditAddress] = useState("");
 
   const [search, setSearch] = useState("");
+  const [confirmSave, setConfirmSave] = useState(false);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
   // LOAD USERS
   useEffect(() => {
@@ -94,7 +96,6 @@ export default function AdminUsers() {
 
   // DELETE USER
   const deleteUser = async (userId: string) => {
-    if (!confirm("Delete this user?")) return;
     const res = await fetch("/api/admin/users/delete", {
       method: "POST",
       body: JSON.stringify({ user_id: userId }),
@@ -104,6 +105,7 @@ export default function AdminUsers() {
 
     const reload = await fetch("/api/admin/users/list");
     setUsers((await reload.json()).users);
+    setDeleteUserId(null);
   };
 
   // SAVE EDIT
@@ -176,16 +178,15 @@ export default function AdminUsers() {
   // RENDER ADMIN PAGE (DARK MODE)
   // -------------------------------------------
   return (
-    <div className="min-h-screen bg-black text-gray-200 p-5 w-full">
-
+    <div className="min-h-screen bg-black text-white p-4 sm:p-6 w-full">
       {/* NAVIGATION BUTTONS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
         <a
-          href="/admin/products"
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-purple-500/50 hover:scale-105"
+          href="/admin/users"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-blue-500/50 hover:scale-105"
         >
-          <span className="text-xl">🛒</span>
-          <span>Products</span>
+          <span className="text-xl">👥</span>
+          <span>Users</span>
         </a>
         <a
           href="/admin/orders"
@@ -193,6 +194,13 @@ export default function AdminUsers() {
         >
           <span className="text-xl">📦</span>
           <span>Orders</span>
+        </a>
+        <a
+          href="/admin/products"
+          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-purple-500/50 hover:scale-105"
+        >
+          <span className="text-xl">🏷️</span>
+          <span>Products</span>
         </a>
         <a
           href="/admin/restaurants"
@@ -208,217 +216,288 @@ export default function AdminUsers() {
           <span className="text-xl">📊</span>
           <span>Analytics</span>
         </a>
-        <a
-          href="/products"
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-emerald-500/50 hover:scale-105"
-        >
-          <span className="text-xl">🛍️</span>
-          <span>Shop</span>
-        </a>
       </div>
 
-      <h1 className="text-3xl font-bold mb-6 text-white">Admin — Users</h1>
-
-      {/* CREATE USER */}
-      <div className="border border-gray-700 p-6 rounded-lg bg-gray-900/80 shadow mb-8 space-y-3 w-full">
-        <h2 className="text-xl font-semibold mb-3 text-white">Create User</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="p-2 bg-gray-800 border border-gray-700 rounded text-gray-200"
-          />
-          <input
-            placeholder="First Name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            className="p-2 bg-gray-800 border border-gray-700 rounded text-gray-200"
-          />
-          <input
-            placeholder="Last Name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            className="p-2 bg-gray-800 border border-gray-700 rounded text-gray-200"
-          />
-          <input
-            placeholder="Phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="p-2 bg-gray-800 border border-gray-700 rounded text-gray-200"
-          />
-          <input
-            placeholder="Address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            className="p-2 bg-gray-800 border border-gray-700 rounded text-gray-200 md:col-span-2"
-          />
-        </div>
-
-        <button
-          onClick={createUser}
-          className="bg-green-700 hover:bg-green-600 text-white p-2 rounded w-full md:w-48"
-        >
-          Create User
-        </button>
+      {/* HEADER */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold text-white">👥 Users</h1>
+        <p className="text-white/60 text-sm mt-1">Manage customer accounts</p>
       </div>
-
-      {/* QR CODE */}
-      {qrCodeUrl && (
-        <div className="mb-6 p-6 border border-gray-700 rounded-lg bg-gray-900/80 shadow text-center">
-          <h3 className="font-semibold mb-3 text-white">Login QR Code</h3>
-
-          <img src={qrCodeUrl} className="mx-auto w-48 h-48" />
-
-          <p className="mt-3 text-sm break-all text-gray-300">{loginLink}</p>
-
-          <button
-            onClick={() => {
-              const a = document.createElement("a");
-              a.href = qrCodeUrl!;
-              a.download = "login_qr.png";
-              a.click();
-            }}
-            className="mt-3 bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded"
-          >
-            Download QR
-          </button>
-        </div>
-      )}
 
       {/* SEARCH */}
       <div className="mb-4">
         <input
-          placeholder="Search users..."
+          placeholder="🔍 Search users..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="p-2 bg-gray-800 border border-gray-700 rounded w-full text-gray-200"
+          className="w-full p-3 bg-slate-800/50 border border-white/10 rounded-lg text-white placeholder:text-white/40 focus:outline-none focus:border-blue-500/50 transition"
         />
       </div>
 
-      {/* USERS TABLE */}
-      <div className="bg-gray-900/70 border border-gray-700 shadow rounded-lg overflow-hidden w-full">
-        <table className="w-full text-left border-collapse">
-          <thead className="bg-gray-800 text-gray-300 uppercase text-sm">
-            <tr>
-              <th className="p-3">Email</th>
-              <th className="p-3">Name</th>
-              <th className="p-3">Phone</th>
-              <th className="p-3">Address</th>
-              <th className="p-3 text-center">Actions</th>
-            </tr>
-          </thead>
+      {/* CREATE USER BUTTON */}
+      <button
+        onClick={() => setEditingUser({} as UserRow)}
+        className="w-full mb-6 py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
+      >
+        <span>+</span> Create New User
+      </button>
 
-          <tbody>
-            {users
-              .filter((u) => {
-                const s = search.toLowerCase();
-                return (
-                  u.email.toLowerCase().includes(s) ||
-                  (u.first_name || "").toLowerCase().includes(s) ||
-                  (u.last_name || "").toLowerCase().includes(s) ||
-                  (u.phone || "").toLowerCase().includes(s) ||
-                  (u.address || "").toLowerCase().includes(s)
-                );
-              })
-              .map((u, i) => (
-                <tr
-                  key={u.id}
-                  className={`border-t border-gray-700 ${i % 2 === 0 ? "bg-gray-900" : "bg-gray-800"
-                    } hover:bg-gray-700 transition`}
+      {/* QR CODE MODAL */}
+      {qrCodeUrl && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-blue-500/30 rounded-2xl p-6 shadow-xl w-full max-w-md text-center">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Login QR Code</h3>
+              <button
+                onClick={() => setQrCodeUrl(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500 text-white transition"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <img src={qrCodeUrl} className="mx-auto w-64 h-64 rounded-lg mb-4" />
+            
+            <div className="bg-slate-800/50 rounded-lg p-3 mb-4">
+              <p className="text-sm break-all text-white/70">{loginLink}</p>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (loginLink) {
+                    navigator.clipboard.writeText(loginLink);
+                    alert("Link copied to clipboard!");
+                    setQrCodeUrl(null);
+                  }
+                }}
+                className="flex-1 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg font-semibold transition"
+              >
+                Copy Link
+              </button>
+              <button
+                onClick={() => {
+                  const a = document.createElement("a");
+                  a.href = qrCodeUrl!;
+                  a.download = "login_qr.png";
+                  a.click();
+                }}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold transition"
+              >
+                Download QR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* USERS LIST - MOBILE FRIENDLY CARDS */}
+      <div className="space-y-3">
+        {users
+          .filter((u) => {
+            const s = search.toLowerCase();
+            return (
+              u.email.toLowerCase().includes(s) ||
+              (u.first_name || "").toLowerCase().includes(s) ||
+              (u.last_name || "").toLowerCase().includes(s) ||
+              (u.phone || "").toLowerCase().includes(s) ||
+              (u.address || "").toLowerCase().includes(s)
+            );
+          })
+          .map((u) => (
+            <div
+              key={u.id}
+              className="bg-slate-800/40 border border-white/10 rounded-lg p-4 hover:bg-slate-800/60 transition"
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div className="flex-1">
+                  <div className="text-lg font-bold text-white">
+                    {u.first_name || "Unknown"} {u.last_name || ""}
+                  </div>
+                  <div className="text-sm text-white/60">{u.email}</div>
+                  {u.phone && (
+                    <div className="text-sm text-white/50 mt-1">📱 {u.phone}</div>
+                  )}
+                  {u.address && (
+                    <div className="text-sm text-white/50 mt-1">📍 {u.address}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => showQrForUser(u.id)}
+                  className="flex-1 min-w-[80px] px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition"
                 >
-                  <td className="p-3">{u.email}</td>
-                  <td className="p-3">
-                    {(u.first_name || "") + " " + (u.last_name || "")}
-                  </td>
-                  <td className="p-3">{u.phone || ""}</td>
-                  <td className="p-3">{u.address || ""}</td>
+                  QR
+                </button>
+                <button
+                  onClick={() => loadHistory(u)}
+                  className="flex-1 min-w-[80px] px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-semibold transition"
+                >
+                  History
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingUser(u);
+                    setEditEmail(u.email || "");
+                    setEditFirstName(u.first_name || "");
+                    setEditLastName(u.last_name || "");
+                    setEditPhone(u.phone || "");
+                    setEditAddress(u.address || "");
+                  }}
+                  className="px-3 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg text-sm transition"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setDeleteUserId(u.id)}
+                  className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm transition"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
 
-                  <td className="p-3 text-center">
-                    <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => showQrForUser(u.id)}
-                        className="px-2 py-1 bg-blue-700 hover:bg-blue-600 text-white rounded text-sm"
-                      >
-                        QR
-                      </button>
-                      <button
-                        onClick={() => loadHistory(u)}
-                        className="px-2 py-1 bg-purple-700 hover:bg-purple-600 text-white rounded text-sm"
-                      >
-                        History
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingUser(u);
-                          setEditEmail(u.email || "");
-                          setEditFirstName(u.first_name || "");
-                          setEditLastName(u.last_name || "");
-                          setEditPhone(u.phone || "");
-                          setEditAddress(u.address || "");
-                        }}
-                        className="px-2 py-1 bg-yellow-600 hover:bg-yellow-500 text-white rounded text-sm"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteUser(u.id)}
-                        className="px-2 py-1 bg-red-700 hover:bg-red-600 text-white rounded text-sm"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+        {users.filter((u) => {
+          const s = search.toLowerCase();
+          return (
+            u.email.toLowerCase().includes(s) ||
+            (u.first_name || "").toLowerCase().includes(s) ||
+            (u.last_name || "").toLowerCase().includes(s) ||
+            (u.phone || "").toLowerCase().includes(s) ||
+            (u.address || "").toLowerCase().includes(s)
+          );
+        }).length === 0 && (
+          <div className="text-center py-12 text-white/60">
+            <p className="text-lg">No users found</p>
+          </div>
+        )}
       </div>
 
-      {/* EDIT MODAL */}
+      {/* EDIT/CREATE MODAL */}
       {editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-gray-900 border border-gray-700 p-6 rounded-lg shadow-lg w-96 space-y-4 text-gray-200">
-            <h3 className="text-lg font-semibold text-white">Edit User</h3>
-
-            <input
-              value={editEmail}
-              onChange={(e) => setEditEmail(e.target.value)}
-              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
-            />
-            <input
-              value={editFirstName}
-              onChange={(e) => setEditFirstName(e.target.value)}
-              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
-            />
-            <input
-              value={editLastName}
-              onChange={(e) => setEditLastName(e.target.value)}
-              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
-            />
-            <input
-              value={editPhone}
-              onChange={(e) => setEditPhone(e.target.value)}
-              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
-            />
-            <input
-              value={editAddress}
-              onChange={(e) => setEditAddress(e.target.value)}
-              className="w-full p-2 bg-gray-800 border border-gray-700 rounded"
-            />
-
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={saveEdit}
-                className="bg-green-700 hover:bg-green-600 text-white px-3 py-2 rounded w-full"
-              >
-                Save
-              </button>
-
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-blue-500/30 p-6 rounded-2xl shadow-xl w-full max-w-md space-y-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">
+                {editingUser.id ? "Edit User" : "Create User"}
+              </h3>
               <button
                 onClick={() => setEditingUser(null)}
-                className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-2 rounded w-full"
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500 text-white transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Email</label>
+              <input
+                placeholder="Email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder:text-white/40"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">First Name</label>
+              <input
+                placeholder="First Name"
+                value={editFirstName}
+                onChange={(e) => setEditFirstName(e.target.value)}
+                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder:text-white/40"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Last Name</label>
+              <input
+                placeholder="Last Name"
+                value={editLastName}
+                onChange={(e) => setEditLastName(e.target.value)}
+                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder:text-white/40"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Phone</label>
+              <input
+                placeholder="Phone"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder:text-white/40"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Address</label>
+              <input
+                placeholder="Address"
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
+                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder:text-white/40"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              {editingUser.id ? (
+                <button
+                  onClick={() => setConfirmSave(true)}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition"
+                >
+                  Save Changes
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    setEmail(editEmail);
+                    setFirstName(editFirstName);
+                    setLastName(editLastName);
+                    setPhone(editPhone);
+                    setAddress(editAddress);
+                    setEditingUser(null);
+                    await createUser();
+                  }}
+                  className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition"
+                >
+                  Create User
+                </button>
+              )}
+              <button
+                onClick={() => setEditingUser(null)}
+                className="px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION MODAL */}
+      {confirmSave && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-slate-900 border border-yellow-500/30 p-6 rounded-2xl shadow-xl w-full max-w-sm">
+            <h3 className="text-xl font-bold text-white mb-4">Confirm Changes</h3>
+            <p className="text-white/70 mb-6">Are you sure you want to save these changes?</p>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  setConfirmSave(false);
+                  await saveEdit();
+                }}
+                className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition"
+              >
+                Yes, Save
+              </button>
+              <button
+                onClick={() => setConfirmSave(false)}
+                className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition"
               >
                 Cancel
               </button>
@@ -429,61 +508,62 @@ export default function AdminUsers() {
 
       {/* HISTORY MODAL */}
       {historyUser && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-blue-500/30 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
             {/* Header */}
-            <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+            <div className="p-5 border-b border-white/10 flex justify-between items-center">
               <div>
                 <h3 className="text-xl font-bold text-white">Order History</h3>
-                <p className="text-sm text-gray-400">
-                  {historyUser.first_name} {historyUser.last_name} ({historyUser.email})
+                <p className="text-sm text-white/60 mt-1">
+                  {historyUser.first_name} {historyUser.last_name}
                 </p>
+                <p className="text-xs text-white/40">{historyUser.email}</p>
               </div>
               <button
                 onClick={() => setHistoryUser(null)}
-                className="text-gray-400 hover:text-white"
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500 text-white transition"
               >
                 ✕
               </button>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {historyLoading ? (
-                <div className="text-center py-10 text-gray-400">Loading history...</div>
+                <div className="text-center py-10 text-white/60">Loading history...</div>
               ) : historyOrders.length === 0 ? (
-                <div className="text-center py-10 text-gray-500">No orders found for this user.</div>
+                <div className="text-center py-10 text-white/40">No orders found for this user.</div>
               ) : (
                 historyOrders.map((order) => (
-                  <div key={order.id} className="bg-gray-800/50 border border-gray-700 rounded-lg p-4">
+                  <div key={order.id} className="bg-slate-800/40 border border-white/10 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <div className="text-sm text-gray-400">
+                        <div className="text-sm text-white/60">
                           {new Date(order.created_at).toLocaleString()}
                         </div>
-                        <div className={`inline-block px-2 py-0.5 rounded text-xs font-bold mt-1 uppercase ${order.status === 'delivered' ? 'bg-green-900 text-green-300' :
-                          order.status === 'canceled' ? 'bg-red-900 text-red-300' :
-                            'bg-blue-900 text-blue-300'
+                        <div className={`inline-block px-2 py-1 rounded-lg text-xs font-semibold mt-2 ${order.status === 'delivered' ? 'bg-green-500/20 text-green-400' :
+                          order.status === 'canceled' ? 'bg-red-500/20 text-red-400' :
+                            order.status === 'out_for_delivery' ? 'bg-cyan-500/20 text-cyan-400' :
+                              'bg-blue-500/20 text-blue-400'
                           }`}>
                           {order.status.replace(/_/g, ' ')}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-white">€{order.total?.toFixed(2)}</div>
-                        <div className="text-xs text-gray-500">{order.order_items.length} items</div>
+                        <div className="text-xl font-bold text-blue-400">€{order.total?.toFixed(2)}</div>
+                        <div className="text-xs text-white/50">{order.order_items.length} items</div>
                       </div>
                     </div>
 
-                    <div className="space-y-2 border-t border-gray-700/50 pt-3">
+                    <div className="space-y-2 border-t border-white/10 pt-3">
                       {order.order_items.map((item: any) => {
                         const product = item.product || item.restaurant_item;
                         return (
                           <div key={item.id} className="flex justify-between text-sm">
-                            <span className="text-gray-300">
-                              {item.quantity}x {product?.name || "Unknown"}
+                            <span className="text-white/80">
+                              {item.quantity}× {product?.name || "Unknown"}
                             </span>
-                            <span className="text-gray-400">
+                            <span className="text-white/60 font-semibold">
                               €{(item.price * item.quantity).toFixed(2)}
                             </span>
                           </div>
@@ -496,13 +576,54 @@ export default function AdminUsers() {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-gray-700 bg-gray-900 rounded-b-xl">
+            <div className="p-4 border-t border-white/10">
               <button
                 onClick={() => setHistoryUser(null)}
-                className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg font-semibold transition"
+                className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition"
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteUserId && (
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 rounded-2xl border border-red-500/30 w-full max-w-md">
+            {/* Header */}
+            <div className="p-6 border-b border-white/10">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">⚠️ Delete User</h2>
+                <button
+                  onClick={() => setDeleteUserId(null)}
+                  className="w-8 h-8 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center transition"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <p className="text-white/80 mb-6">
+                Are you sure you want to delete this user? This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteUserId(null)}
+                  className="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-semibold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteUser(deleteUserId)}
+                  className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white rounded-lg font-semibold transition"
+                >
+                  Yes, Delete
+                </button>
+              </div>
             </div>
           </div>
         </div>

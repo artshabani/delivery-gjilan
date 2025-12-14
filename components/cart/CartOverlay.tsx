@@ -24,7 +24,6 @@ export default function CartOverlay() {
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
-  const [confirmOrderOpen, setConfirmOrderOpen] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
 
@@ -105,7 +104,11 @@ export default function CartOverlay() {
         // Safest is to probably alert user but let's just log for now to not block if API fails.
       }
 
-      const orderPayload: any = {
+      const orderPayload: {
+        total: number;
+        created_at: string;
+        user_id: string;
+      } = {
         total: totalPrice,
         created_at: new Date().toISOString(),
         user_id: userId,
@@ -183,7 +186,7 @@ export default function CartOverlay() {
       });
 
       setTimeout(() => setOrderSuccess(false), 2000);
-    } catch (err) {
+    } catch {
       setPlacingOrder(false);
       toast.error("Unexpected error.");
     }
@@ -193,9 +196,13 @@ export default function CartOverlay() {
      CART BODY RENDER
   -------------------------------------------------------- */
   const cartBody = (
-    <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto pr-1">
+    <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto pr-1">
       {cartItems.length === 0 && (
-        <p className="text-sm text-white/60">Shporta juaj eshte e zbrazet.</p>
+        <div className="text-center py-12 text-white/60">
+          <div className="text-4xl mb-3">🛒</div>
+          <p className="text-sm font-medium">Shporta juaj eshte boshe</p>
+          <p className="text-xs text-white/40 mt-1">Filloni shtimin e produkteve</p>
+        </div>
       )}
 
       {cartItems.map(({ product, quantity }) => {
@@ -203,14 +210,17 @@ export default function CartOverlay() {
           product.is_on_sale && product.sale_price
             ? product.sale_price
             : product.price;
+        const itemTotal = price * quantity;
+        const originalTotal = product.price * quantity;
+        const savings = product.is_on_sale ? originalTotal - itemTotal : 0;
 
         return (
           <div
             key={`${product.id}-${product.notes ?? ""}`}
-            className="flex items-center justify-between gap-3 bg-slate-800/80 rounded-xl px-3 py-2"
+            className="bg-slate-800/40 rounded-lg p-3 hover:bg-slate-800/50 transition"
           >
-            <div className="flex items-center gap-3">
-              <div className="relative w-12 h-12 rounded-lg bg-slate-900 overflow-hidden">
+            <div className="flex items-start gap-3">
+              <div className="relative w-14 h-14 rounded-lg bg-slate-900 overflow-hidden flex-shrink-0">
                 {product.image_url?.startsWith("http") && (
                   <Image
                     src={product.image_url}
@@ -221,53 +231,67 @@ export default function CartOverlay() {
                 )}
               </div>
 
-
-              <div className="max-w-[160px]">
-                <p className="text-sm font-medium text-white">{product.name}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white truncate">{product.name}</p>
 
                 {product.restaurant_name && (
-                  <p className="text-xs text-purple-300 mt-0.5">📍 {product.restaurant_name}</p>
+                  <p className="text-xs text-purple-300/80 mt-0.5">📍 {product.restaurant_name}</p>
                 )}
 
                 {product.notes && (
-                  <p className="text-xs text-blue-300 mt-1">{product.notes}</p>
+                  <p className="text-xs text-blue-300/80 mt-1 line-clamp-1">{product.notes}</p>
                 )}
 
-                {product.is_on_sale && product.sale_price ? (
-                  <div className="flex flex-col leading-tight mt-1">
-                    <span className="text-green-400 font-semibold text-xs">
-                      €{product.sale_price.toFixed(2)} copa
-                    </span>
-                    <span className="text-red-400 text-[11px] line-through opacity-70">
-                      €{product.price.toFixed(2)}
-                    </span>
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-2">
+                    {product.is_on_sale && product.sale_price ? (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-green-400 font-bold text-xs">
+                          €{price.toFixed(2)}
+                        </span>
+                        <span className="text-white/40 text-[10px] line-through">
+                          €{product.price.toFixed(2)}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-white/70 text-xs">
+                        €{price.toFixed(2)}
+                      </span>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-xs text-white/50">
-                    €{product.price.toFixed(2)} copa
-                  </p>
-                )}
+                  <span className="text-white font-bold text-sm">
+                    €{itemTotal.toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="flex gap-2 items-center">
-              <button
-                onClick={() => decreaseItem(String(product.id))}
-                className="w-7 h-7 bg-slate-700 rounded-full text-white text-sm flex items-center justify-center"
-              >
-                -
-              </button>
+            <div className="flex gap-2 items-center justify-between mt-2 pt-2">
+              <div className="flex gap-1.5 items-center">
+                <button
+                  onClick={() => decreaseItem(String(product.id))}
+                  className="w-7 h-7 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm flex items-center justify-center transition"
+                >
+                  −
+                </button>
 
-              <span className="text-sm font-semibold text-white">
-                {quantity}
-              </span>
+                <span className="text-sm font-semibold text-white min-w-[20px] text-center">
+                  {quantity}
+                </span>
 
-              <button
-                onClick={() => addItem(product, 1, product.notes ?? "")}
-                className="w-7 h-7 bg-blue-600 rounded-full text-white text-sm flex items-center justify-center"
-              >
-                +
-              </button>
+                <button
+                  onClick={() => addItem(product, 1, product.notes ?? "")}
+                  className="w-7 h-7 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm flex items-center justify-center transition"
+                >
+                  +
+                </button>
+              </div>
+
+              {savings > 0 && (
+                <span className="text-xs text-green-400 font-medium">
+                  -€{savings.toFixed(2)}
+                </span>
+              )}
             </div>
           </div>
         );
@@ -285,10 +309,10 @@ export default function CartOverlay() {
         <div className="fixed bottom-5 left-0 w-full flex justify-center z-40 pointer-events-none">
           <button
             onClick={() => setIsCartOpen(true)}
-            className="dg-cart-btn pointer-events-auto w-[85%] py-4 rounded-full bg-[#2563eb] text-white shadow-[0_6px_20px_rgba(0,0,0,0.45)] flex items-center justify-between px-6 active:scale-95 transition"
+            className="dg-cart-btn pointer-events-auto w-[85%] py-4 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/40 flex items-center justify-between px-6 active:scale-95 hover:shadow-blue-600/60 transition-all"
           >
-            <span className="flex items-center gap-3 text-base">
-              <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-sm font-semibold">
+            <span className="flex items-center gap-3 text-base font-medium">
+              <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
                 {totalQuantity}
               </span>
               Shikoni porosine
@@ -309,13 +333,13 @@ export default function CartOverlay() {
             onClick={() => setIsCartOpen(false)}
           />
 
-          <div className="relative z-10 w-[92%] max-w-md cart-border-track-blue">
-            <div className="bg-slate-900 rounded-2xl shadow-2xl p-4 flex flex-col max-h-[80vh]">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-semibold text-white">Shporta juaj</h2>
+          <div className="relative z-10 w-[92%] max-w-md bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border-2 border-blue-500/40">
+            <div className="flex flex-col max-h-[80vh] bg-slate-900">
+              <div className="sticky top-0 z-20 flex justify-between items-center p-4 border-b border-slate-700 bg-slate-900">
+                <h2 className="text-lg font-bold text-white">🛒 Shporta juaj</h2>
                 <button
                   onClick={() => setIsCartOpen(false)}
-                  className="w-7 h-7 bg-slate-800 rounded-full text-white flex items-center justify-center"
+                  className="w-8 h-8 bg-red-600 hover:bg-red-500 rounded-lg text-white flex items-center justify-center transition font-bold"
                 >
                   ✕
                 </button>
@@ -323,54 +347,56 @@ export default function CartOverlay() {
 
               {cartBody}
 
-              {/* SUBTOTAL */}
-              <div className="mt-4 border-t border-white/10 pt-3 space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-sm text-white/80">Subtotal</span>
-                  <span className="text-sm text-white/80">
-                    €{subtotal.toFixed(2)}
-                  </span>
-                </div>
+              {/* SUMMARY */}
+              {hasCart && (
+                <>
+                  <div className="sticky bottom-0 z-20 mt-4 border-t border-slate-700 pt-4 px-4 pb-4 bg-slate-900">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-white/70">Subtotal</span>
+                        <span className="text-white/70">€{subtotal.toFixed(2)}</span>
+                      </div>
 
-                {restaurantMixFee > 0 && (
-                  <div className="flex justify-between items-center text-yellow-300">
-                    <span className="text-sm flex items-center gap-1.5">
-                      <Info size={16} />
-                      Tarifa per porosi nga 2 vende te ndryshme
-                    </span>
-                    <span className="text-sm">+€{restaurantMixFee.toFixed(2)}</span>
+                      {restaurantMixFee > 0 && (
+                        <div className="flex justify-between items-start text-xs bg-yellow-500/5 border border-yellow-500/30 rounded-lg p-2">
+                          <span className="text-yellow-300 flex items-center gap-1.5">
+                            <Info size={14} />
+                            Tarifa 2 vendesh
+                          </span>
+                          <span className="text-yellow-300 font-medium">+€{restaurantMixFee.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center pt-2">
+                        <span className="text-base font-bold text-white">Total</span>
+                        <span className="text-lg font-bold text-blue-400">€{totalPrice.toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() => setConfirmClearOpen(true)}
+                        className="flex-1 py-2.5 bg-red-600/20 hover:bg-red-600/30 border border-red-600/40 rounded-lg text-red-400 text-sm font-medium transition"
+                      >
+                        Fshini
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (!requireMinimumTotal()) return;
+                          const userId = requireUserId();
+                          if (!userId) return;
+                          setIsCartOpen(false);
+                          placeOrder();
+                        }}
+                        className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-white text-sm font-bold transition active:scale-95"
+                      >
+                        Porosit
+                      </button>
+                    </div>
                   </div>
-                )}
-
-                <div className="flex justify-between pt-1">
-                  <span className="text-base font-bold text-white">Total</span>
-                  <span className="text-base font-bold text-white">
-                    €{totalPrice.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={() => setConfirmClearOpen(true)}
-                  className="flex-1 py-2 bg-red-600/80 rounded-xl text-white"
-                >
-                  Fshini shporten
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (!requireMinimumTotal()) return;
-                    const userId = requireUserId();
-                    if (!userId) return;
-                    setIsCartOpen(false);
-                    setConfirmOrderOpen(true);
-                  }}
-                  className="flex-1 py-2 bg-blue-600 rounded-xl text-white font-semibold"
-                >
-                  Porosit
-                </button>
-              </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -407,44 +433,6 @@ export default function CartOverlay() {
                   setIsCartOpen(false);
                 }}
                 className="flex-1 py-2 bg-red-600 rounded-lg font-semibold"
-              >
-                Yes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CONFIRM ORDER MODAL */}
-      {confirmOrderOpen && (
-        <div className="fixed inset-0 flex items-center justify-center z-[999]">
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setConfirmOrderOpen(false)}
-          />
-
-          <div className="relative z-[1000] w-[85%] max-w-sm bg-slate-900 rounded-xl p-5 text-center shadow-xl">
-            <h2 className="text-lg font-semibold text-white mb-3">
-              Confirm Order
-            </h2>
-            <p className="text-white/70 text-sm mb-5">
-              A jeni te sigurt qe doni te porosisni?
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmOrderOpen(false)}
-                className="flex-1 py-2 bg-pink-500 hover:bg-pink-600 text-white font-semibold rounded-lg transition"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={async () => {
-                  setConfirmOrderOpen(false);
-                  await placeOrder();
-                }}
-                className="flex-1 py-2 bg-blue-600 rounded-lg font-semibold"
               >
                 Yes
               </button>

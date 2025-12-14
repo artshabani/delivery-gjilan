@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { Plus, X, ArrowLeft } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
@@ -30,6 +30,7 @@ import { SortableItem } from "@/components/SortableItem";
 
 export default function RestaurantDetail() {
   const { id } = useParams();
+  const router = useRouter();
   const restaurantId = Number(id);
 
   const [restaurant, setRestaurant] = useState<any>(null);
@@ -507,49 +508,59 @@ export default function RestaurantDetail() {
   const unassignedItems = items.filter(item => !item.section);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white px-4 sm:px-6 py-10 pb-28">
+    <div className="min-h-screen bg-black text-white px-4 sm:px-6 py-10 pb-28">
       <div className="max-w-3xl mx-auto">
 
         {/* HEADER */}
-        <div className="mb-6 text-center">
-          <h1 className="text-3xl sm:text-4xl font-semibold mt-2">{restaurant.name}</h1>
+        <div className="mb-6">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 mb-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-semibold transition text-white shadow-md hover:shadow-lg"
+          >
+            <ArrowLeft size={18} />
+            Back
+          </button>
+          
+          <div className="text-center">
+            <h1 className="text-3xl sm:text-4xl font-semibold">{restaurant.name}</h1>
 
-          {/* Admin Buttons */}
-          {isAdmin && (
-            <div className="mt-4 flex gap-2 justify-center flex-wrap">
-              <button
-                onClick={() => setShowSectionManager(!showSectionManager)}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-xl text-sm font-semibold transition"
-              >
-                {showSectionManager ? "Hide" : "Manage"} Sections
-              </button>
-              <button
-                onClick={() => setShowAddItem(!showAddItem)}
-                className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-sm font-semibold transition"
-              >
-                {showAddItem ? "Hide" : "Add"} Item
-              </button>
-              <button
-                onClick={() => {
-                  setSelectionMode(!selectionMode);
-                  setSelectedItemIds(new Set());
-                }}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${selectionMode ? "bg-blue-500 text-white" : "bg-slate-800 text-white/70 hover:text-white"}`}
-              >
-                {selectionMode ? "Cancel Selection" : "Bulk Edit"}
-              </button>
-            </div>
-          )}
+            {/* Admin Buttons */}
+            {isAdmin && (
+              <div className="mt-4 flex gap-2 justify-center flex-wrap">
+                <button
+                  onClick={() => setShowSectionManager(!showSectionManager)}
+                  className="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded-lg text-sm font-semibold transition"
+                >
+                  {showSectionManager ? "Hide" : "Manage"} Sections
+                </button>
+                <button
+                  onClick={() => setShowAddItem(!showAddItem)}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-semibold transition"
+                >
+                  {showAddItem ? "Hide" : "Add"} Item
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectionMode(!selectionMode);
+                    setSelectedItemIds(new Set());
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${selectionMode ? "bg-blue-600 text-white" : "bg-slate-800/60 border border-slate-700 text-white/70 hover:bg-slate-700 hover:text-white"}`}
+                >
+                  {selectionMode ? "Cancel Selection" : "Bulk Edit"}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* SECTION FILTERS */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide sm:justify-center">
           <button
             onClick={() => setSelectedSectionFilter(null)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition whitespace-nowrap border border-transparent
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap border
               ${!selectedSectionFilter
-                ? "bg-white text-black"
-                : "bg-slate-900/50 border-slate-700 text-white hover:bg-slate-800"}`}
+                ? "bg-blue-600 border-blue-500 text-white"
+                : "bg-slate-800/60 border-slate-700 text-white hover:bg-slate-700"}`}
           >
             All
           </button>
@@ -560,10 +571,10 @@ export default function RestaurantDetail() {
               onClick={() => setSelectedSectionFilter(
                 selectedSectionFilter === section.name ? null : section.name
               )}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition whitespace-nowrap border border-transparent
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap border
                 ${selectedSectionFilter === section.name
-                  ? "bg-white text-black"
-                  : "bg-slate-900/50 border-slate-700 text-white hover:bg-slate-800"}`}
+                  ? "bg-blue-600 border-blue-500 text-white"
+                  : "bg-slate-800/60 border-slate-700 text-white hover:bg-slate-700"}`}
             >
               <span>{section.emoji}</span>
               <span>{section.name}</span>
@@ -573,7 +584,7 @@ export default function RestaurantDetail() {
 
         {/* SECTION MANAGER - Admin Only */}
         {isAdmin && showSectionManager && (
-          <div className="mb-8 p-6 bg-slate-900/50 border border-slate-800 rounded-2xl">
+          <div className="mb-8 p-6 bg-slate-900/30 border border-slate-800/50 rounded-xl">
             <h3 className="text-xl font-bold mb-4">Section Manager</h3>
 
             {/* Add New Section */}
@@ -718,7 +729,7 @@ export default function RestaurantDetail() {
 
         {/* ADD/EDIT ITEM FORM - Admin Only */}
         {isAdmin && showAddItem && (
-          <div className="mb-8 p-6 bg-slate-900/50 border border-slate-800 rounded-2xl">
+          <div className="mb-8 p-6 bg-slate-900/30 border border-slate-800/50 rounded-xl">
             <h3 className="text-xl font-bold mb-4">{editingItemId ? "Edit Item" : "Add New Item"}</h3>
 
             <div className="space-y-3">
@@ -806,8 +817,8 @@ export default function RestaurantDetail() {
                 <div
                   key={item.id}
                   className="flex items-center justify-between gap-4 p-5 
-                             bg-slate-900/50 border border-slate-800 
-                             rounded-2xl shadow-sm hover:bg-slate-900/70 
+                             bg-slate-900/30 border border-slate-800/50 
+                             rounded-xl shadow-sm hover:bg-slate-900/50 
                              transition"
                 >
                   <div className="flex-1">
@@ -908,8 +919,8 @@ export default function RestaurantDetail() {
                   <div
                     key={item.id}
                     className="flex items-center justify-between gap-4 p-5 
-                               bg-slate-900/50 border border-slate-800 
-                               rounded-2xl shadow-sm hover:bg-slate-900/70 
+                               bg-slate-900/30 border border-slate-800/50 
+                               rounded-xl shadow-sm hover:bg-slate-900/50 
                                transition"
                   >
                     <div className="flex flex-col">
@@ -986,7 +997,7 @@ export default function RestaurantDetail() {
 
       {/* BULK ACTION BAR */}
       {selectionMode && selectedItemIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 p-4 rounded-2xl shadow-2xl z-50 flex items-center gap-4 animate-in slide-in-from-bottom-10">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 p-4 rounded-xl shadow-2xl z-50 flex items-center gap-4 animate-in slide-in-from-bottom-10">
           <span className="font-semibold text-white">{selectedItemIds.size} items selected</span>
 
           <select
@@ -1041,7 +1052,7 @@ function ItemModal({ item, restaurantId, restaurantName, onClose }: any) {
 
   return (
     <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-md flex items-center justify-center px-5 animate-fadeIn">
-      <div className="w-full max-w-sm bg-slate-900/90 border border-slate-700 rounded-3xl p-6 shadow-2xl relative">
+      <div className="w-full max-w-sm bg-slate-900/90 border border-slate-700 rounded-xl p-6 shadow-2xl relative">
 
         {/* CLOSE */}
         <button

@@ -63,17 +63,17 @@ export default function OrderHistoryPage() {
     const getStatusColor = (status: string) => {
         switch (status) {
             case "pending":
-                return "text-amber-400 border-amber-400/30 bg-amber-400/10";
+                return "text-yellow-500 bg-yellow-500/15";
             case "accepted":
-                return "text-blue-400 border-blue-400/30 bg-blue-400/10";
+                return "text-blue-400 bg-blue-400/15";
             case "out_for_delivery":
-                return "text-purple-400 border-purple-400/30 bg-purple-400/10";
+                return "text-cyan-400 bg-cyan-400/15";
             case "delivered":
-                return "text-green-400 border-green-400/30 bg-green-400/10";
+                return "text-green-400 bg-green-400/15";
             case "canceled":
-                return "text-red-400 border-red-400/30 bg-red-400/10";
+                return "text-red-400 bg-red-400/15";
             default:
-                return "text-gray-400 border-gray-400/30 bg-gray-400/10";
+                return "text-white/70 bg-white/10";
         }
     };
 
@@ -142,7 +142,7 @@ export default function OrderHistoryPage() {
                                     <div className="text-sm text-white/50 mb-1">
                                         {new Date(order.created_at).toLocaleDateString()} • {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>
-                                    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
+                                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${getStatusColor(order.status)}`}>
                                         {getStatusIcon(order.status)}
                                         {formatStatus(order.status)}
                                     </div>

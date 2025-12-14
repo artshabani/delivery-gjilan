@@ -143,177 +143,208 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-gray-800 text-gray-100 p-6 rounded-lg shadow-xl w-[500px] max-h-[90vh] overflow-y-auto space-y-4 border border-gray-700">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4">
+      <div className="w-full max-w-3xl bg-slate-900 text-white border border-white/10 rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-white/10">
+          <div>
+            <p className="text-sm text-white/50">Create new product</p>
+            <h2 className="text-2xl font-bold">Add Product</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-9 h-9 rounded-full bg-slate-800 border border-white/10 hover:border-white/30 flex items-center justify-center text-xl"
+          >
+            ×
+          </button>
+        </div>
 
-        <h2 className="text-xl font-semibold">Add Product</h2>
+        <div className="px-6 py-5 space-y-6">
+          {/* Basic info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="space-y-2">
+              <span className="text-sm font-semibold text-white/80">Name</span>
+              <input
+                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="Product name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </label>
 
-        {/* NAME */}
-        <input
-          className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
-          placeholder="Name"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
-
-        {/* PRICE */}
-        <input
-          type="number"
-          className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
-          placeholder="Cmimi"
-          value={form.price}
-          onChange={(e) => setForm({ ...form, price: e.target.value })}
-        />
-
-        {/* RESTAURANT PRICE */}
-        {form.is_restaurant_extra && (
-          <input
-            type="number"
-            className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
-            placeholder="Restaurant Price (Optional)"
-            value={form.restaurant_price}
-            onChange={(e) => setForm({ ...form, restaurant_price: e.target.value })}
-          />
-        )}
-
-        {/* CATEGORIES */}
-        <select
-          className="w-full p-2 bg-gray-700 border border-gray-600 rounded"
-          value={form.category_id}
-          onChange={(e) => setForm({ ...form, category_id: e.target.value })}
-        >
-          <option value="">Select category…</option>
-
-          {parents.map((parent: Category) => (
-            <optgroup key={parent.id} label={parent.name}>
-              {subcategories
-                .filter((sub: Category) => sub.parent_id === parent.id)
-                .map((sub: Category) => (
-                  <option key={sub.id} value={sub.id}>
-                    {sub.name}
-                  </option>
+            <label className="space-y-2">
+              <span className="text-sm font-semibold text-white/80">Category</span>
+              <select
+                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg focus:outline-none focus:border-blue-500"
+                value={form.category_id}
+                onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+              >
+                <option value="">Select category…</option>
+                {parents.map((parent: Category) => (
+                  <optgroup key={parent.id} label={parent.name}>
+                    {subcategories
+                      .filter((sub: Category) => sub.parent_id === parent.id)
+                      .map((sub: Category) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.name}
+                        </option>
+                      ))}
+                  </optgroup>
                 ))}
-            </optgroup>
-          ))}
-        </select>
+              </select>
+            </label>
+          </div>
 
-        {/* STORES */}
-        <div className="pt-2 border-t border-gray-700">
-          <p className="text-sm font-semibold mb-2">Available in Stores</p>
+          {/* Pricing */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label className="space-y-2">
+              <span className="text-sm font-semibold text-white/80">Price (€)</span>
+              <input
+                type="number"
+                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="0.00"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })}
+              />
+            </label>
 
-          {stores.map((store: Store) => {
-            const isSelected = selectedStores.includes(store.id);
-            return (
-              <div key={store.id} className="mb-3 p-2 bg-gray-700/50 rounded">
-                <label className="flex items-center gap-2 mb-2">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedStores([...selectedStores, store.id]);
-                        // Initialize wholesale price if not set
-                        if (!wholesalePrices[store.id]) {
-                          setWholesalePrices({
-                            ...wholesalePrices,
-                            [store.id]: "",
-                          });
-                        }
-                      } else {
-                        setSelectedStores(
-                          selectedStores.filter((id) => id !== store.id)
-                        );
-                        // Remove wholesale price when store is deselected
-                        const newPrices = { ...wholesalePrices };
-                        delete newPrices[store.id];
-                        setWholesalePrices(newPrices);
-                      }
-                    }}
-                  />
-                  <span className="font-medium">{store.name}</span>
-                </label>
-                
-                {isSelected && (
-                  <div className="ml-6">
-                    <label className="text-xs text-gray-400 block mb-1">
-                      Wholesale Price (€)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      className="w-full p-1.5 bg-gray-800 border border-gray-600 rounded text-sm"
-                      placeholder="0.00"
-                      value={wholesalePrices[store.id] || ""}
-                      onChange={(e) => {
-                        setWholesalePrices({
-                          ...wholesalePrices,
-                          [store.id]: e.target.value,
-                        });
-                      }}
-                    />
-                  </div>
-                )}
+            <label className="space-y-2">
+              <span className="text-sm font-semibold text-white/80 flex items-center gap-2">
+                Restaurant Price
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-white/10 uppercase tracking-wide">Optional</span>
+              </span>
+              <input
+                type="number"
+                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg focus:outline-none focus:border-blue-500"
+                placeholder="0.00"
+                value={form.restaurant_price}
+                onChange={(e) => setForm({ ...form, restaurant_price: e.target.value })}
+                disabled={!form.is_restaurant_extra}
+              />
+            </label>
+
+            <label className="space-y-2">
+              <span className="text-sm font-semibold text-white/80">Extras visibility</span>
+              <div className="p-3 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-between">
+                <span className="text-sm text-white/70">Show in restaurant extras</span>
+                <input
+                  type="checkbox"
+                  checked={form.is_restaurant_extra}
+                  onChange={(e) => setForm({ ...form, is_restaurant_extra: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-500 bg-slate-900"
+                />
               </div>
-            );
-          })}
+            </label>
+          </div>
+
+          {/* Image upload */}
+          <div className="grid grid-cols-1 md:grid-cols-[160px,1fr] gap-4 items-center">
+            <div className="aspect-square w-full max-w-[160px] bg-slate-800 border border-white/10 rounded-xl flex items-center justify-center overflow-hidden">
+              {form.image_url ? (
+                <img src={form.image_url} alt="preview" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white/40 text-sm">No image</span>
+              )}
+            </div>
+            <div className="space-y-2">
+              <span className="text-sm font-semibold text-white/80">Image</span>
+              <label className="block">
+                <input
+                  type="file"
+                  className="w-full text-sm text-white/80 file:mr-3 file:px-4 file:py-2 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"
+                  onChange={(e) => {
+                    if (e.target.files) uploadImage(e.target.files[0]);
+                  }}
+                  disabled={uploading}
+                />
+              </label>
+              {uploading && <p className="text-xs text-white/50">Uploading image...</p>}
+            </div>
+          </div>
+
+          {/* Stores and wholesale */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-white/80">Stores & wholesale</p>
+              <span className="text-xs text-white/50">Select stores and enter wholesale price</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {stores.map((store: Store) => {
+                const isSelected = selectedStores.includes(store.id);
+                return (
+                  <div key={store.id} className="p-3 rounded-lg bg-slate-800 border border-white/10">
+                    <label className="flex items-center gap-2 mb-2">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedStores([...selectedStores, store.id]);
+                            if (!wholesalePrices[store.id]) {
+                              setWholesalePrices({
+                                ...wholesalePrices,
+                                [store.id]: "",
+                              });
+                            }
+                          } else {
+                            setSelectedStores(selectedStores.filter((id) => id !== store.id));
+                            const newPrices = { ...wholesalePrices };
+                            delete newPrices[store.id];
+                            setWholesalePrices(newPrices);
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-gray-500 bg-slate-900"
+                      />
+                      <span className="font-semibold text-white">{store.name}</span>
+                    </label>
+
+                    {isSelected && (
+                      <div className="space-y-1">
+                        <label className="text-xs text-white/50">Wholesale price (€)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="w-full p-2 bg-slate-900 border border-white/10 rounded-lg text-sm"
+                          placeholder="0.00"
+                          value={wholesalePrices[store.id] || ""}
+                          onChange={(e) => {
+                            setWholesalePrices({
+                              ...wholesalePrices,
+                              [store.id]: e.target.value,
+                            });
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && <div className="p-3 rounded-lg bg-red-600/20 border border-red-500/40 text-sm text-red-200">{error}</div>}
+
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-3 pt-1">
+            <button
+              onClick={onClose}
+              className="sm:w-auto w-full px-4 py-3 rounded-lg border border-white/10 text-white hover:bg-white/5 transition"
+              disabled={uploading || creating}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={create}
+              className="sm:w-auto w-full px-5 py-3 rounded-lg bg-green-600 hover:bg-green-500 text-white font-semibold shadow-lg shadow-green-600/30 disabled:opacity-60"
+              disabled={uploading || creating}
+            >
+              {creating ? "Creating..." : uploading ? "Uploading..." : "Add Product"}
+            </button>
+          </div>
         </div>
-
-        {/* IMAGE UPLOAD */}
-        <div>
-          <input
-            type="file"
-            className="text-gray-200"
-            onChange={(e) => {
-              if (e.target.files) uploadImage(e.target.files[0]);
-            }}
-            disabled={uploading}
-          />
-          {uploading && (
-            <p className="text-sm text-gray-400 mt-1">Uploading image...</p>
-          )}
-        </div>
-
-        {form.image_url && (
-          <img
-            src={form.image_url}
-            className="w-20 h-20 rounded border border-gray-600 object-cover"
-          />
-        )}
-
-        {/* RESTAURANT EXTRA CHECKBOX */}
-        <label className="flex items-center gap-2 p-2 bg-gray-700/30 rounded cursor-pointer">
-          <input
-            type="checkbox"
-            checked={form.is_restaurant_extra}
-            onChange={(e) => setForm({ ...form, is_restaurant_extra: e.target.checked })}
-            className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500"
-          />
-          <span className="text-sm font-medium text-gray-200">
-            Show in Restaurant Extras (Drinks & Extras)
-          </span>
-        </label>
-
-        {/* ERROR MESSAGE */}
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-
-        {/* ADD BUTTON */}
-        <button
-          className="w-full bg-green-600 hover:bg-green-500 text-white py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-          onClick={create}
-          disabled={uploading || creating}
-        >
-          {creating ? "Creating..." : uploading ? "Uploading..." : "Add Product"}
-        </button>
-
-        <button
-          className="w-full text-gray-300 py-2 disabled:opacity-50"
-          onClick={onClose}
-          disabled={uploading || creating}
-        >
-          Cancel
-        </button>
-
       </div>
     </div>
   );

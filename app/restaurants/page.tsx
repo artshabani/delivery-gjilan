@@ -38,6 +38,39 @@ export default function RestaurantsPage() {
 
   ];
 
+  // Get default image based on category
+  const getCategoryImage = (category: string | null, restaurantId: number) => {
+    const categoryImages: Record<string, string[]> = {
+      "Hamburger": [
+        "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&h=600&fit=crop",
+        "https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&h=600&fit=crop",
+        "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=800&h=600&fit=crop",
+      ],
+      "Dyner": [
+        "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=800&h=600&fit=crop",
+        "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=800&h=600&fit=crop",
+        "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=800&h=600&fit=crop",
+      ],
+      "Pizza": [
+        "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&h=600&fit=crop",
+        "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&h=600&fit=crop",
+        "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800&h=600&fit=crop",
+      ],
+      "Restaurant": [
+        "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop",
+        "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=600&fit=crop",
+        "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=800&h=600&fit=crop",
+      ],
+    };
+    
+    const images = category && categoryImages[category] 
+      ? categoryImages[category] 
+      : categoryImages["Restaurant"];
+    
+    // Use restaurant ID to cycle through images
+    return images[restaurantId % images.length];
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -115,13 +148,13 @@ export default function RestaurantsPage() {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <p className="text-white/70">Loading restaurants…</p>
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white px-4 sm:px-6 py-10">
+    <div className="min-h-screen bg-black text-white px-4 sm:px-6 py-10 pb-28">
       <div className="max-w-4xl mx-auto">
 
         {/* Title */}
@@ -137,7 +170,7 @@ export default function RestaurantsPage() {
         {/* Browse Groceries Button */}
         <div className="flex justify-center mb-6">
           <Link href="/products">
-            <button className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold shadow-lg shadow-purple-500/20 transition flex items-center gap-2">
+            <button className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow transition flex items-center gap-2">
               <span>🛒</span>
               Browse Groceries
             </button>
@@ -154,10 +187,10 @@ export default function RestaurantsPage() {
                   selectedCategory === cat.label ? null : cat.label
                 )
               }
-              className={`rounded-2xl h-28 flex flex-col items-center justify-center border shadow transition
+              className={`rounded-lg h-28 flex flex-col items-center justify-center border shadow transition
                 ${selectedCategory === cat.label
-                  ? "bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-500/50"
-                  : "bg-slate-900/70 border-slate-800 text-white/80 hover:bg-slate-900/90"
+                  ? "bg-blue-600 text-white border-blue-500 shadow"
+                  : "bg-slate-800/60 border-slate-700 text-white/80 hover:bg-slate-700"
                 }`}
             >
               <div className="text-3xl">{cat.icon}</div>
@@ -171,7 +204,7 @@ export default function RestaurantsPage() {
           <div className="flex justify-center mb-6">
             <button
               onClick={() => setSelectedCategory(null)}
-              className="px-5 py-2 rounded-xl bg-slate-800 border border-slate-700 
+              className="px-5 py-2 rounded-lg bg-slate-800/60 border border-slate-700 
                          hover:bg-slate-700 text-white text-sm font-semibold shadow
                          transition"
             >
@@ -187,9 +220,8 @@ export default function RestaurantsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Kerko restaurante…"
-            className="w-full p-3 rounded-2xl bg-slate-900 border border-slate-800 
-                       text-white placeholder-white/40 shadow focus:outline-none
-                       focus:ring-2 focus:ring-blue-600 transition"
+            className="w-full h-11 sm:h-12 px-4 sm:px-5 rounded-xl bg-slate-900/70 border border-blue-600 
+                       text-white placeholder-white/60 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 outline-none transition"
           />
         </div>
 
@@ -221,7 +253,7 @@ export default function RestaurantsPage() {
                     <SortableItem key={r.id} id={r.id} disabled={!isAdmin}>
                       <Link
                         href={`/restaurants/${r.id}`}
-                        className="relative block overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/50 shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5"
+                        className="relative block overflow-hidden rounded-xl border border-slate-800/50 bg-slate-900/30 shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5"
                       >
                         {isAdmin && (
                           <div className="absolute top-4 left-4 z-10 bg-purple-600/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-semibold text-white border border-purple-500/50">
@@ -233,7 +265,7 @@ export default function RestaurantsPage() {
                             src={
                               r.image_url && r.image_url.startsWith('http')
                                 ? r.image_url
-                                : "https://via.placeholder.com/400x300?text=Restaurant"
+                                : getCategoryImage(r.category, r.id)
                             }
                             alt={r.name}
                             className="w-full h-full object-cover scale-105 blur-sm"

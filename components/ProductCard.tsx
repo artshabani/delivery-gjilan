@@ -5,7 +5,9 @@ import { Product } from "@/types/product";
 import { useCart } from "@/context/CartContext";
 import { useState, useRef } from "react";
 
-interface Props extends Product {}
+interface Props extends Product {
+  onClick?: () => void;
+}
 
 export default function ProductCard({
   id,
@@ -14,6 +16,7 @@ export default function ProductCard({
   sale_price,
   is_on_sale,
   image_url,
+  onClick,
 }: Props) {
   const { addItem, decreaseItem, items } = useCart();
   const quantity =
@@ -69,6 +72,7 @@ export default function ProductCard({
       onMouseEnter={showInstant}
       onMouseLeave={startHideTimer}
       onTouchStart={showInstant}
+      onClick={onClick}
     >
       {/* IMAGE */}
       <div className="relative w-full aspect-square rounded-t-2xl overflow-hidden">
@@ -142,25 +146,34 @@ export default function ProductCard({
       </div>
 
       {/* INFO */}
-      <div className="p-4 bg-[#0b0c14]">
-        {is_on_sale && sale_price ? (
-          <div>
-            <p className="text-green-400 font-bold text-sm">
-              €{sale_price.toFixed(2)}
-            </p>
-            <p className="text-red-400 text-xs line-through opacity-70">
-              €{price.toFixed(2)}
-            </p>
-          </div>
-        ) : (
-          <p className="text-blue-300 font-semibold text-sm">
-            €{price.toFixed(2)}
-          </p>
-        )}
-
-        <p className="text-white font-medium text-sm line-clamp-2 mt-1">
+      <div className="p-3 sm:p-4 bg-[#0b0c14]">
+        <p className="text-white font-semibold text-[13px] sm:text-sm leading-snug line-clamp-2">
           {name}
         </p>
+
+        <div className="mt-2 flex items-center justify-between">
+          {is_on_sale && sale_price ? (
+            <div className="flex items-baseline gap-2">
+                <span className="text-blue-300 font-semibold text-sm">
+                €{sale_price.toFixed(2)}
+              </span>
+                <span className="text-red-400 text-xs line-through opacity-80">
+                €{price.toFixed(2)}
+              </span>
+            </div>
+          ) : (
+            <span className="text-blue-400 font-bold text-sm">
+              €{price.toFixed(2)}
+            </span>
+          )}
+
+          <button
+            onClick={inc}
+            className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold shadow hover:bg-blue-500 active:scale-95"
+          >
+            Add
+          </button>
+        </div>
       </div>
 
       

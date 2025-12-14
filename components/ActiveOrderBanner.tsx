@@ -237,12 +237,12 @@ export default function ActiveOrderBanner() {
   })();
 
   const statusStyles = {
-    pending: { bg: "from-yellow-500 to-amber-500", text: "Prisni korierin" },
-    accepted: { bg: "from-sky-500 to-blue-500", text: "Porosia u pranua" },
-    confirmed: { bg: "from-sky-500 to-blue-500", text: "Preparing order" },
-    out_for_delivery: { bg: "from-green-500 to-emerald-600", text: "Korieri rruges..." },
-    delivered: { bg: "from-gray-600 to-slate-700", text: "Delivered" },
-    canceled: { bg: "from-red-500 to-rose-600", text: "Canceled" },
+    pending: { bg: "from-yellow-500 to-amber-500", text: "Prisni korierin", color: "text-yellow-400" },
+    accepted: { bg: "from-sky-500 to-blue-500", text: "Porosia u pranua", color: "text-blue-400" },
+    confirmed: { bg: "from-sky-500 to-blue-500", text: "Preparing order", color: "text-blue-400" },
+    out_for_delivery: { bg: "from-green-500 to-emerald-600", text: "Korieri rruges...", color: "text-green-400" },
+    delivered: { bg: "from-gray-600 to-slate-700", text: "Delivered", color: "text-gray-400" },
+    canceled: { bg: "from-red-500 to-rose-600", text: "Canceled", color: "text-red-400" },
   };
 
   const palette = statusStyles[order.status as keyof typeof statusStyles];
@@ -301,7 +301,7 @@ export default function ActiveOrderBanner() {
             <div className="flex justify-between items-center">
               <h3 className="text-xl font-semibold text-white">Order details</h3>
               <button
-                className="text-white/70 hover:text-white"
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500 transition text-white"
                 onClick={() => setDetailsOpen(false)}
               >
                 ✕
@@ -309,37 +309,37 @@ export default function ActiveOrderBanner() {
             </div>
 
             {/* STATUS */}
-            <div className="bg-slate-800/80 border border-blue-500/30 rounded-xl p-3 flex items-center justify-between">
+            <div className={`${palette.bg} rounded-2xl p-4 flex items-center justify-between bg-gradient-to-r`}>
               <div>
-                <p className="text-white text-sm">Status</p>
-                <p className="text-white font-semibold capitalize">
+                <p className="text-white/80 text-xs uppercase tracking-wide">Status</p>
+                <p className="font-bold capitalize text-white text-lg mt-1">
                   {order.status.replace(/_/g, " ")}
                 </p>
-                <p className="text-white/70 text-xs">{palette.text}</p>
+                <p className="text-white/70 text-xs mt-1">{palette.text}</p>
               </div>
 
               {order.status === "out_for_delivery" && (
                 <div className="text-center">
-                  <p className="text-white/70 text-xs">ETA</p>
-                  <p className="text-3xl font-bold text-white">{etaText}</p>
+                  <p className="text-white/70 text-xs uppercase">ETA</p>
+                  <p className="text-2xl font-bold text-white mt-1">{etaText}</p>
                 </div>
               )}
             </div>
 
             {/* ITEMS */}
-            <div className="bg-slate-800/60 rounded-xl border border-blue-500/30">
+            <div className="bg-slate-800/40 rounded-2xl">
               <button
-                className="w-full flex items-center justify-between px-3 py-2 text-white text-sm"
+                className="w-full flex items-center justify-between px-4 py-3 text-white text-sm font-semibold hover:bg-slate-800/60 transition rounded-t-2xl"
                 onClick={() => setShowItems((s) => !s)}
               >
-                <span className="font-semibold">
+                <span>
                   Items ({order.order_items?.length || 0})
                 </span>
-                <span className="text-white/70 text-xs">{showItems ? "Hide" : "Show"}</span>
+                <span className="text-white/60 text-xs">{showItems ? "▼" : "▶"}</span>
               </button>
 
               {showItems && (
-                <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
+                <div className="border-t border-white/10 p-3 space-y-2 max-h-64 overflow-y-auto rounded-b-2xl">
                   {order.order_items?.map((item) => {
                     const name =
                       item.product?.name ||
@@ -351,9 +351,9 @@ export default function ActiveOrderBanner() {
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center gap-3 bg-slate-900/60 rounded-lg p-2 border border-slate-800"
+                        className="flex items-center gap-3 bg-slate-900/40 rounded-lg p-3 hover:bg-slate-900/60 transition"
                       >
-                        <div className="w-12 h-12 rounded-lg bg-slate-700 overflow-hidden">
+                        <div className="w-12 h-12 rounded-lg bg-slate-700 overflow-hidden flex-shrink-0">
                           {img ? (
                             <img src={img} alt={name} className="w-full h-full object-cover" />
                           ) : (
@@ -361,14 +361,14 @@ export default function ActiveOrderBanner() {
                           )}
                         </div>
 
-                        <div className="flex-1">
-                          <p className="text-white text-sm font-semibold">{name}</p>
-                          <p className="text-slate-300 text-xs">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-semibold truncate">{name}</p>
+                          <p className="text-slate-400 text-xs mt-0.5">
                             {item.quantity} × €{item.price.toFixed(2)}
                           </p>
                         </div>
 
-                        <p className="text-white font-semibold text-sm">
+                        <p className="text-blue-400 font-semibold text-sm flex-shrink-0">
                           €{(item.quantity * item.price).toFixed(2)}
                         </p>
                       </div>
@@ -378,9 +378,9 @@ export default function ActiveOrderBanner() {
               )}
             </div>
 
-            <div className="flex justify-between items-center text-white font-semibold">
-              <span>Total</span>
-              <span>€{order.total.toFixed(2)}</span>
+            <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl p-4 flex justify-between items-center">
+              <span className="text-white/80 font-semibold">Total</span>
+              <span className="text-2xl font-bold text-blue-400">€{order.total.toFixed(2)}</span>
             </div>
           </div>
         </div>

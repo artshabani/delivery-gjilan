@@ -22,7 +22,7 @@ interface Props {
 export default function AddProductModal({ categories, stores, onClose }: Props) {
   const [form, setForm] = useState({
     name: "",
-    price: "",
+    price: "1",
     restaurant_price: "",
     category_id: "",
     image_url: "",
@@ -34,8 +34,9 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
     stores.length > 0 ? [stores[0].id] : []
   );
   const [wholesalePrices, setWholesalePrices] = useState<Record<number, string>>(
-    stores.length > 0 ? { [stores[0].id]: "" } : {}
+    stores.length > 0 ? { [stores[0].id]: "1" } : {}
   );
+  const [keepOpen, setKeepOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,7 +140,17 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
         throw new Error(errorData.error || "Failed to create product");
       }
 
-      onClose();
+      if (!keepOpen) {
+        onClose();
+      } else {
+        // Reset only name and image, keep other values
+        setForm({
+          ...form,
+          name: "",
+          image_url: "",
+        });
+        setError(null);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to create product");
     } finally {
@@ -206,6 +217,8 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
               <span className="text-sm font-semibold text-white/80">Price (€)</span>
               <input
                 type="number"
+                step="0.01"
+                min="0"
                 className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg focus:outline-none focus:border-blue-500"
                 placeholder="0.00"
                 value={form.price}
@@ -326,6 +339,17 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
               })}
             </div>
           </div>
+
+          {/* Keep open toggle */}
+          <label className="flex items-center gap-2 p-3 rounded-lg bg-slate-800 border border-white/10 hover:border-white/20 transition cursor-pointer">
+            <input
+              type="checkbox"
+              checked={keepOpen}
+              onChange={(e) => setKeepOpen(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-500 bg-slate-900"
+            />
+            <span className="text-sm font-medium text-white/80">Do not close the window after adding</span>
+          </label>
 
           {/* Error */}
           {error && <div className="p-3 rounded-lg bg-red-600/20 border border-red-500/40 text-sm text-red-200">{error}</div>}

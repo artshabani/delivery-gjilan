@@ -17,6 +17,8 @@ export default function CartOverlay() {
     subtotal,
     restaurantMixFee,
     totalPrice,
+    courierMessage,
+    setCourierMessage,
     addItem,
     decreaseItem,
     clearCart,
@@ -162,6 +164,7 @@ export default function CartOverlay() {
             subtotal,
             restaurantMixFee,
             userId,
+            courierMessage,
             items: cartItems.map(({ product, quantity }) => ({
               name: product.name,
               quantity,
@@ -350,7 +353,22 @@ export default function CartOverlay() {
               {/* SUMMARY */}
               {hasCart && (
                 <>
-                  <div className="sticky bottom-0 z-20 mt-4 border-t border-slate-700 pt-4 px-4 pb-4 bg-slate-900">
+                  <div className="sticky bottom-0 z-20 mt-4 border-t border-slate-700 pt-4 px-4 pb-4 bg-slate-900 space-y-4">
+                    {/* Courier Message */}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-white/80">💬 Mesazh per kurierin</label>
+                      <textarea
+                        placeholder="P.sh: Mund ta leni pran deres..."
+                        value={courierMessage}
+                        onChange={(e) => setCourierMessage(e.target.value)}
+                        maxLength={200}
+                        className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder:text-white/40 focus:border-blue-500 focus:outline-none resize-none text-sm"
+                        rows={2}
+                      />
+                      <p className="text-xs text-white/50 text-right">{courierMessage.length}/200</p>
+                    </div>
+
+                    {/* Price Summary */}
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-white/70">Subtotal</span>
@@ -373,7 +391,7 @@ export default function CartOverlay() {
                       </div>
                     </div>
 
-                    <div className="flex gap-2 mt-4">
+                    <div className="flex gap-2">
                       <button
                         onClick={() => setConfirmClearOpen(true)}
                         className="flex-1 py-2.5 bg-red-600/20 hover:bg-red-600/30 border border-red-600/40 rounded-lg text-red-400 text-sm font-medium transition"

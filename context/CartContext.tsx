@@ -15,6 +15,8 @@ interface CartContextType {
   subtotal: number;
   restaurantMixFee: number;
   totalPrice: number;
+  courierMessage: string;
+  setCourierMessage: (message: string) => void;
   addItem: (product: Product, qty?: number, notes?: string) => void;
   decreaseItem: (productId: string) => void;
   removeItem: (productId: string) => void;
@@ -25,6 +27,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [courierMessage, setCourierMessage] = useState<string>("");
 
   /* -----------------------------------------------
      Load from localStorage
@@ -36,6 +39,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const parsed: CartItem[] = JSON.parse(stored);
         setItems(parsed);
       }
+
+      const storedMessage = localStorage.getItem("courierMessage");
+      if (storedMessage) {
+        setCourierMessage(storedMessage);
+      }
     } catch {}
   }, []);
 
@@ -45,6 +53,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     localStorage.setItem("cart", JSON.stringify(items));
   }, [items]);
+
+  useEffect(() => {
+    localStorage.setItem("courierMessage", courierMessage);
+  }, [courierMessage]);
 
   /* -----------------------------------------------
      Detect how many restaurants are in the cart
@@ -174,6 +186,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         subtotal,
         restaurantMixFee,
         totalPrice,
+        courierMessage,
+        setCourierMessage,
         addItem,
         decreaseItem,
         removeItem,

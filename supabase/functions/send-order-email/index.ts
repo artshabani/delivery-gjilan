@@ -24,9 +24,9 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { orderId, total, items, userId } = await req.json();
+    const { orderId, total, items, userId, courierMessage } = await req.json();
 
-    console.log("📨 Incoming order payload:", { orderId, total, items, userId });
+    console.log("📨 Incoming order payload:", { orderId, total, items, userId, courierMessage });
 
     /* ---------------------------------------------------------
         Load customer info from user_profiles
@@ -99,6 +99,13 @@ serve(async (req: Request): Promise<Response> => {
           📞 ${phone}<br/>
           📍 ${address}
         </div>
+
+        ${courierMessage ? `
+          <div style="margin:15px 0; padding:12px; background:#fef3c7; border-left:4px solid #f59e0b; border-radius:4px;">
+            <strong>💬 Message for courier:</strong><br/>
+            <em>"${courierMessage}"</em>
+          </div>
+        ` : ""}
 
         <table width="100%" cellpadding="6" cellspacing="0" style="border-collapse:collapse; margin-top:20px;">
           <thead>

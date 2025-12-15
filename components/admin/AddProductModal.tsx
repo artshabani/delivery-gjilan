@@ -29,8 +29,13 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
     is_restaurant_extra: false,
   });
 
-  const [selectedStores, setSelectedStores] = useState<number[]>([]);
-  const [wholesalePrices, setWholesalePrices] = useState<Record<number, string>>({});
+  // Check first store by default
+  const [selectedStores, setSelectedStores] = useState<number[]>(
+    stores.length > 0 ? [stores[0].id] : []
+  );
+  const [wholesalePrices, setWholesalePrices] = useState<Record<number, string>>(
+    stores.length > 0 ? { [stores[0].id]: "" } : {}
+  );
   const [uploading, setUploading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +201,7 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
           </div>
 
           {/* Pricing */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-4">
             <label className="space-y-2">
               <span className="text-sm font-semibold text-white/80">Price (€)</span>
               <input
@@ -205,21 +210,6 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
                 placeholder="0.00"
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
-              />
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-white/80 flex items-center gap-2">
-                Restaurant Price
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 border border-white/10 uppercase tracking-wide">Optional</span>
-              </span>
-              <input
-                type="number"
-                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg focus:outline-none focus:border-blue-500"
-                placeholder="0.00"
-                value={form.restaurant_price}
-                onChange={(e) => setForm({ ...form, restaurant_price: e.target.value })}
-                disabled={!form.is_restaurant_extra}
               />
             </label>
 
@@ -234,6 +224,19 @@ export default function AddProductModal({ categories, stores, onClose }: Props) 
                   className="w-4 h-4 rounded border-gray-500 bg-slate-900"
                 />
               </div>
+
+              {form.is_restaurant_extra && (
+                <div className="pt-2">
+                  <label className="text-xs text-white/50 block mb-2">Restaurant Price (€) - Optional</label>
+                  <input
+                    type="number"
+                    className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg focus:outline-none focus:border-blue-500"
+                    placeholder="0.00"
+                    value={form.restaurant_price}
+                    onChange={(e) => setForm({ ...form, restaurant_price: e.target.value })}
+                  />
+                </div>
+              )}
             </label>
           </div>
 

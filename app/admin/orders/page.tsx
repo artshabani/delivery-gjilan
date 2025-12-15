@@ -1,14 +1,37 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import React from "react";
+import Link from "next/link";
+import AdminGuard from "@/components/admin/AdminGuard";
+
+interface OrderType {
+  id: string;
+  user_id: string;
+  total: number;
+  status: string;
+  created_at: string;
+  eta_minutes?: number | null;
+  out_for_delivery_at?: string | null;
+  user?: { id: string; first_name: string; last_name: string };
+  order_items?: Array<{
+    id: number;
+    quantity: number;
+    price: number;
+    notes?: string;
+    product?: { name: string; image_url?: string };
+    restaurant_item?: { name: string; image_url?: string };
+  }>;
+}
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<OrderType[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sortCol, setSortCol] = useState("created_at");
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [etaModal, setEtaModal] = useState<{ id: string; status: string } | null>(null);
   const [etaInput, setEtaInput] = useState<string>("15");
@@ -16,9 +39,7 @@ export default function AdminOrdersPage() {
   const [now, setNow] = useState(() => Date.now());
   const [showCompleted, setShowCompleted] = useState(false);
 
-
-
-  async function load(showSpinner = true) {
+  const load = useCallback(async (showSpinner = true) => {
     if (showSpinner) setLoading(true);
 
     // FIX 1: The query is now stabilized. 
@@ -38,7 +59,7 @@ export default function AdminOrdersPage() {
     }
 
     setLoading(false);
-  }
+  }, [sortCol, sortDir]);
 
   // Focus ETA input when modal opens
   useEffect(() => {
@@ -52,6 +73,7 @@ export default function AdminOrdersPage() {
      REALTIME LISTENER
   --------------------------------------------- */
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     load();
 
     const channel = supabase
@@ -70,7 +92,7 @@ export default function AdminOrdersPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sortCol, sortDir]);
+  }, [load]);
 
   // Tick every second for admin-side countdowns
   useEffect(() => {
@@ -109,14 +131,6 @@ export default function AdminOrdersPage() {
       load();
     }
   }
-  function changeSort(column: string) {
-    if (sortCol === column) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortCol(column);
-      setSortDir("desc");
-    }
-  }
 
   const formatRemaining = (ms: number | null) => {
     if (ms === null) return null;
@@ -126,7 +140,7 @@ export default function AdminOrdersPage() {
     return `${mins}m ${secs.toString().padStart(2, "0")}s`;
   };
 
-  const getRemainingMs = (o: any): number | null => {
+  const getRemainingMs = (o: OrderType): number | null => {
     if (!o.out_for_delivery_at || o.eta_minutes == null) return null;
     const end =
       new Date(o.out_for_delivery_at).getTime() + Number(o.eta_minutes) * 60000;
@@ -160,6 +174,7 @@ export default function AdminOrdersPage() {
   const completedOrders = orders.filter((o) => o.status === "delivered" || o.status === "canceled");
 
   return (
+    <AdminGuard>
     <div className="min-h-screen w-full bg-black text-white p-4 sm:p-6">
       {/* NAVIGATION BUTTONS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
@@ -184,13 +199,13 @@ export default function AdminOrdersPage() {
           <span className="text-xl">🏷️</span>
           <span>Products</span>
         </a>
-        <a
+        <Link
           href="/admin/restaurants"
           className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-indigo-500/50 hover:scale-105"
         >
           <span className="text-xl">🍽️</span>
           <span>Restaurants</span>
-        </a>
+        </Link>
         <a
           href="/admin/analytics"
           className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-cyan-600 to-cyan-700 hover:from-cyan-500 hover:to-cyan-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-cyan-500/50 hover:scale-105"
@@ -349,7 +364,7 @@ export default function AdminOrdersPage() {
 
                   {expanded === o.id && (
                     <div className="bg-black/40 rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
-                      {o.order_items?.map((item: any) => {
+                      {o.order_items?.map((item) => {
                         const product = item.product || item.restaurant_item;
                         const itemTotal = (item.price || 0) * (item.quantity || 1);
                         return (
@@ -479,5 +494,6 @@ export default function AdminOrdersPage() {
         </div>
       )}
     </div>
+    </AdminGuard>
   );
 }

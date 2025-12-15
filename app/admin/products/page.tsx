@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useAdminGuard } from "@/app/hooks/useAdminGuard";
+import AdminGuard from "@/components/admin/AdminGuard";
 import { supabase } from "@/lib/supabase";
 import AddProductModal from "@/components/admin/AddProductModal";
 import EditProductModal from "@/components/admin/EditProductModal";
@@ -18,8 +18,6 @@ function useDebounce(value: string, delay = 400) {
 }
 
 export default function AdminProductsPage() {
-  const guard = useAdminGuard();
-
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [stores, setStores] = useState<any[]>([]);
@@ -66,15 +64,8 @@ export default function AdminProductsPage() {
     );
   });
 
-  // ---------- GUARD ----------
-  if (guard.loading)
-    return <p className="p-6 text-gray-200">Checking permission…</p>;
-  if (!guard.allowed)
-    return (
-      <p className="p-6 text-red-400 text-xl font-semibold">Access Denied</p>
-    );
-
   return (
+    <AdminGuard>
     <div className="min-h-screen w-full bg-gradient-to-b from-slate-950 via-slate-900 to-black text-gray-200 p-6 sm:p-8">
 
       {/* NAVIGATION BUTTONS */}
@@ -426,5 +417,6 @@ export default function AdminProductsPage() {
       )}
 
     </div>
+    </AdminGuard>
   );
 }

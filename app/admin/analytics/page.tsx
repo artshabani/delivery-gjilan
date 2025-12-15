@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useAdminGuard } from "@/app/hooks/useAdminGuard";
+import AdminGuard from "@/components/admin/AdminGuard";
 import { supabase } from "@/lib/supabase";
 
 interface Order {
@@ -23,8 +23,6 @@ interface UserProfile {
 type FilterType = "day" | "week" | "month" | "year";
 
 export default function AnalyticsDashboard() {
-  const guard = useAdminGuard();
-
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [topProducts, setTopProducts] = useState<Array<{ name: string; quantity: number; image?: string }>>([]);
@@ -232,15 +230,12 @@ export default function AnalyticsDashboard() {
     );
   }, [users, userSearch]);
 
-  if (guard.loading || loading) {
+  if (loading) {
     return <p className="p-6 text-gray-200">Loading analytics…</p>;
   }
 
-  if (!guard.allowed) {
-    return <p className="p-6 text-red-400 text-xl font-semibold">Access Denied</p>;
-  }
-
   return (
+    <AdminGuard>
     <div className="min-h-screen w-full bg-gradient-to-b from-slate-950 via-slate-900 to-black text-gray-200 p-6 sm:p-8">
       {/* NAVIGATION BUTTONS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
@@ -675,5 +670,6 @@ export default function AnalyticsDashboard() {
         </div>
       )}
     </div>
+    </AdminGuard>
   );
 }

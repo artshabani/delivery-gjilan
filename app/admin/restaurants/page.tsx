@@ -19,6 +19,17 @@ interface Restaurant {
   description: string | null;
   image_url: string | null;
   category: string | null;
+  opens_at?: string;
+  closes_at?: string;
+  is_open_24_7?: boolean;
+}
+
+interface MenuItem {
+  id: number;
+  name: string;
+  price: number;
+  description?: string;
+  image_url?: string;
 }
 
 const CATEGORY_OPTIONS = [
@@ -35,7 +46,7 @@ export default function AdminRestaurantsPage() {
   const [creating, setCreating] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
-  const [restaurantItems, setRestaurantItems] = useState<Record<number, any[]>>({});
+  const [restaurantItems, setRestaurantItems] = useState<Record<number, MenuItem[]>>({});
   const [itemsLoading, setItemsLoading] = useState<Record<number, boolean>>({});
   const [modal, setModal] = useState<
     | null
@@ -48,7 +59,7 @@ export default function AdminRestaurantsPage() {
       | "item-edit"
       | "item-delete";
       restaurant: Restaurant | null;
-      item?: any;
+      item?: MenuItem;
     }
   >(null);
 
@@ -111,8 +122,8 @@ export default function AdminRestaurantsPage() {
 
       setRestForm((f) => ({ ...f, image_url: publicUrl }));
       toast.success("Image uploaded");
-    } catch (err: any) {
-      toast.error(err.message || "Image upload failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Image upload failed");
     } finally {
       setUploading(false);
     }
@@ -295,9 +306,9 @@ export default function AdminRestaurantsPage() {
       description: r.description || "",
       image_url: r.image_url || "",
       category: r.category || "",
-      opens_at: (r as any).opens_at || "",
-      closes_at: (r as any).closes_at || "",
-      is_open_24_7: (r as any).is_open_24_7 || false,
+      opens_at: r.opens_at || "",
+      closes_at: r.closes_at || "",
+      is_open_24_7: r.is_open_24_7 || false,
     });
     setModal({ type: "edit", restaurant: r });
   };
@@ -317,7 +328,7 @@ export default function AdminRestaurantsPage() {
     setModal({ type: "delete", restaurant: r });
   };
 
-  const openEditItemModal = (r: Restaurant, item: any) => {
+  const openEditItemModal = (r: Restaurant, item: MenuItem) => {
     setItemForm({
       restaurant_id: r.id,
       name: item.name,
@@ -328,7 +339,7 @@ export default function AdminRestaurantsPage() {
     setModal({ type: "item-edit", restaurant: r, item });
   };
 
-  const openDeleteItemModal = (r: Restaurant, item: any) => {
+  const openDeleteItemModal = (r: Restaurant, item: MenuItem) => {
     setModal({ type: "item-delete", restaurant: r, item });
   };
 
@@ -905,7 +916,7 @@ export default function AdminRestaurantsPage() {
                   </button>
 
                   <button
-                    onClick={() => deleteItem(modal.item.id, modal.restaurant?.id ?? 0)}
+                    onClick={() => modal.item && deleteItem(modal.item.id, modal.restaurant?.id ?? 0)}
                     className="flex-1 py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 font-semibold shadow-lg shadow-red-900/30 transition-all"
                   >
                     Delete Item

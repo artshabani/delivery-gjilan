@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import QRCode from "qrcode";
-import { useAdminGuard } from "@/app/hooks/useAdminGuard";
+import AdminGuard from "@/components/admin/AdminGuard";
 
 interface UserRow {
   id: string;
@@ -14,8 +14,6 @@ interface UserRow {
 }
 
 export default function AdminUsers() {
-  const guard = useAdminGuard();
-
   // form states
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -176,26 +174,10 @@ export default function AdminUsers() {
   };
 
   // -------------------------------------------
-  // ACCESS CONTROL
-  // -------------------------------------------
-  if (guard.loading)
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        Checking admin access…
-      </div>
-    );
-
-  if (!guard.allowed)
-    return (
-      <div className="min-h-screen flex items-center justify-center text-red-500 text-2xl font-semibold">
-        ⛔ Access denied — Admin only
-      </div>
-    );
-
-  // -------------------------------------------
   // RENDER ADMIN PAGE (DARK MODE)
   // -------------------------------------------
   return (
+    <AdminGuard>
     <div className="min-h-screen bg-black text-white p-4 sm:p-6 w-full">
       {/* NAVIGATION BUTTONS */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
@@ -663,5 +645,6 @@ export default function AdminUsers() {
         </div>
       )}
     </div>
+    </AdminGuard>
   );
 }

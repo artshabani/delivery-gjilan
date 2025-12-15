@@ -18,8 +18,9 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  useSortable,
 } from "@dnd-kit/sortable";
-import { SortableItem } from "@/components/SortableItem";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Category {
   id: number;
@@ -27,6 +28,110 @@ interface Category {
   icon_url: string | null;
   sort_order: number;
   parent_id: number | null;
+}
+
+interface CategoryItemProps {
+  category: Category;
+  onEdit: (category: Category) => void;
+  onDelete: (id: number) => void;
+  getParentName: (parentId: number | null) => string;
+  getSubcategoryCount: (id: number) => number;
+}
+
+function CategoryItem({ category, onEdit, onDelete, getParentName, getSubcategoryCount }: CategoryItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div className="bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-xl p-4 hover:border-white/20 transition-all">
+        <div className="flex items-start gap-4">
+          {/* Drag Handle */}
+          <div
+            {...attributes}
+            {...listeners}
+            className="flex-shrink-0 w-8 h-8 flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-white/5 rounded-lg transition-colors mt-2"
+            title="Drag to reorder"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              className="w-5 h-5 text-white/40"
+            >
+              <line x1="4" y1="8" x2="20" y2="8" strokeWidth="2" strokeLinecap="round" />
+              <line x1="4" y1="16" x2="20" y2="16" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+
+          {/* Category Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-3">
+              {category.icon_url && (
+                <Image
+                  src={category.icon_url}
+                  alt={category.name}
+                  width={48}
+                  height={48}
+                  className="w-12 h-12 rounded-lg object-cover border border-white/10"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-white truncate">
+                  {category.name}
+                </h3>
+                <p className="text-xs text-white/50">
+                  {category.parent_id === null ? "Root Category" : `Parent: ${getParentName(category.parent_id)}`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-3 text-xs">
+              <div className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg">
+                <span className="text-white/60">Sort:</span>
+                <span className="text-white font-semibold">{category.sort_order}</span>
+              </div>
+              {category.parent_id === null && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg">
+                  <span className="text-white/60">Subcategories:</span>
+                  <span className="text-white font-semibold">{getSubcategoryCount(category.id)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-2 min-w-fit">
+            <button
+              onClick={() => onEdit(category)}
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-blue-500/50"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => onDelete(category.id)}
+              className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-red-500/50"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function AdminCategories() {
@@ -63,7 +168,8 @@ export default function AdminCategories() {
 
   useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Create or update category
   const saveCategory = async () => {
@@ -321,63 +427,14 @@ export default function AdminCategories() {
           >
             <div className="space-y-3">
               {filteredCategories.map((category) => (
-                <SortableItem key={category.id} id={category.id}>
-                  <div className="bg-slate-800/40 backdrop-blur-sm border border-white/10 rounded-xl p-4 hover:border-white/20 transition-all">
-                    <div className="flex items-start justify-between gap-4">
-                      {/* Category Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-3">
-                          {category.icon_url && (
-                            <Image
-                              src={category.icon_url}
-                              alt={category.name}
-                              width={48}
-                              height={48}
-                              className="w-12 h-12 rounded-lg object-cover border border-white/10"
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-lg font-semibold text-white truncate">
-                              {category.name}
-                            </h3>
-                            <p className="text-xs text-white/50">
-                              {category.parent_id === null ? "Root Category" : `Parent: ${getParentName(category.parent_id)}`}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-3 text-xs">
-                          <div className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg">
-                            <span className="text-white/60">Sort:</span>
-                            <span className="text-white font-semibold">{category.sort_order}</span>
-                          </div>
-                          {category.parent_id === null && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg">
-                              <span className="text-white/60">Subcategories:</span>
-                              <span className="text-white font-semibold">{getSubcategoryCount(category.id)}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-col gap-2 min-w-fit">
-                        <button
-                          onClick={() => openEditModal(category)}
-                          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-blue-500/50"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmId(category.id)}
-                          className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-red-500/50"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </SortableItem>
+                <CategoryItem
+                  key={category.id}
+                  category={category}
+                  onEdit={openEditModal}
+                  onDelete={setDeleteConfirmId}
+                  getParentName={getParentName}
+                  getSubcategoryCount={getSubcategoryCount}
+                />
               ))}
 
               {filteredCategories.length === 0 && (

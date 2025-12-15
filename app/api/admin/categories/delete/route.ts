@@ -21,6 +21,19 @@ export async function POST(request: Request) {
     );
   }
 
+  // Check if category has products
+  const { data: products } = await adminSupabase
+    .from("products")
+    .select("id")
+    .eq("category_id", id);
+
+  if (products && products.length > 0) {
+    return NextResponse.json(
+      { error: `Cannot delete category with ${products.length} product(s). Remove or reassign products first.` },
+      { status: 400 }
+    );
+  }
+
   const { error } = await adminSupabase
     .from("product_categories")
     .delete()

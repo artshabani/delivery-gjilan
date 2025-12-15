@@ -148,8 +148,41 @@ export default function RestaurantsPage() {
 
   if (loading)
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <p className="text-white/70">Loading restaurants…</p>
+      <div className="min-h-screen bg-black text-white px-4 sm:px-6 py-10 pb-28">
+        <div className="max-w-4xl mx-auto">
+          {/* Title Skeleton */}
+          <div className="h-9 w-48 bg-slate-800/50 rounded animate-pulse mb-8 mx-auto" />
+
+          {/* Browse Groceries Button Skeleton */}
+          <div className="h-10 w-32 bg-slate-800/50 rounded-lg animate-pulse mb-6 mx-auto" />
+
+          {/* Search Bar Skeleton */}
+          <div className="h-11 bg-slate-800/50 rounded-lg animate-pulse mb-6" />
+
+          {/* Categories Skeleton */}
+          <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-10 w-24 bg-slate-800/50 rounded-full animate-pulse flex-shrink-0" />
+            ))}
+          </div>
+
+          {/* Restaurant Cards Skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-slate-900/50 border border-white/10 rounded-lg overflow-hidden">
+                {/* Image Skeleton */}
+                <div className="aspect-video bg-slate-800/50 animate-pulse" />
+                
+                {/* Content Skeleton */}
+                <div className="p-4 space-y-3">
+                  <div className="h-5 bg-slate-800/50 rounded w-32 animate-pulse" />
+                  <div className="h-4 bg-slate-800/50 rounded w-full animate-pulse" />
+                  <div className="h-4 bg-slate-800/50 rounded w-24 animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
 

@@ -223,7 +223,7 @@ export default function CartOverlay() {
             className="bg-slate-800/40 rounded-lg p-3 hover:bg-slate-800/50 transition"
           >
             <div className="flex items-start gap-3">
-              <div className="relative w-14 h-14 rounded-lg bg-slate-900 overflow-hidden flex-shrink-0">
+              <div className="relative w-14 h-14 rounded-lg bg-slate-900 overflow-hidden flex-shrink-0 flex items-center justify-center">
                 {product.image_url?.startsWith("http") && (
                   <Image
                     src={product.image_url}
@@ -231,6 +231,9 @@ export default function CartOverlay() {
                     fill
                     className="object-cover"
                   />
+                )}
+                {(!product.image_url || !product.image_url.startsWith("http")) && product.type === "restaurant" && (
+                  <span className="text-2xl">🍔</span>
                 )}
               </div>
 

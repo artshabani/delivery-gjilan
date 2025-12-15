@@ -478,7 +478,72 @@ export default function RestaurantDetail() {
     load();
   }, [restaurantId]);
 
-  if (loading) return <p className="p-6 text-white">Loading...</p>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white px-4 sm:px-6 py-10 pb-28">
+        <div className="max-w-3xl mx-auto">
+          {/* Back Button Skeleton */}
+          <div className="mb-6">
+            <div className="h-10 w-24 bg-slate-800/50 rounded-lg mb-4 animate-pulse"></div>
+            
+            {/* Header Skeleton */}
+            <div className="text-center">
+              <div className="h-10 w-64 bg-slate-800/50 rounded-lg mx-auto mb-4 animate-pulse"></div>
+              
+              {/* Admin Buttons Skeleton */}
+              <div className="mt-4 flex gap-2 justify-center flex-wrap">
+                <div className="h-10 w-32 bg-slate-800/50 rounded-lg animate-pulse"></div>
+                <div className="h-10 w-28 bg-slate-800/50 rounded-lg animate-pulse"></div>
+                <div className="h-10 w-32 bg-slate-800/50 rounded-lg animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section Tabs Skeleton */}
+          <div className="mb-8">
+            <div className="flex gap-2 overflow-x-auto pb-4 flex-wrap">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-9 w-24 bg-slate-800/50 rounded-full animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Menu Items Skeleton */}
+          <div className="space-y-6">
+            {[1, 2, 3].map((section) => (
+              <div key={section}>
+                {/* Section Header Skeleton */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="h-8 w-8 bg-slate-800/50 rounded animate-pulse"></div>
+                  <div className="h-7 w-40 bg-slate-800/50 rounded animate-pulse"></div>
+                  <div className="flex-1 h-px bg-gradient-to-r from-slate-700 to-transparent"></div>
+                </div>
+
+                {/* Section Items Skeleton */}
+                <div className="space-y-3">
+                  {[1, 2, 3].map((item) => (
+                    <div
+                      key={item}
+                      className="flex items-center justify-between gap-4 p-5 
+                                 bg-slate-900/30 border border-slate-800/50 
+                                 rounded-xl shadow-sm animate-pulse"
+                    >
+                      <div className="flex flex-col flex-1">
+                        <div className="h-5 w-32 bg-slate-800/50 rounded mb-2"></div>
+                        <div className="h-5 w-20 bg-slate-800/50 rounded"></div>
+                      </div>
+                      <div className="h-12 w-12 bg-slate-800/50 rounded-full"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   if (!restaurant)
     return <p className="p-6 text-red-400 font-semibold">Restaurant not found.</p>;
 

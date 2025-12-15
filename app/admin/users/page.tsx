@@ -49,23 +49,41 @@ export default function AdminUsers() {
   }, []);
 
   // CREATE USER
-  const createUser = async () => {
-    if (!email) return;
+  const createUser = async (userData?: {
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone: string;
+    address: string;
+  }) => {
+    const data = userData || {
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      phone,
+      address,
+    };
+
+    console.log("[CLIENT] Creating user with data:", data);
+
+    if (!data.email) {
+      alert("Email is required");
+      return;
+    }
 
     const res = await fetch("/api/admin/users/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        phone,
-        address,
-      }),
+      body: JSON.stringify(data),
     });
 
     const result = await res.json();
-    if (result.error) return alert(result.error);
+    console.log("[CLIENT] Create user response:", result);
+    
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
 
     const token = result.token;
     const link = `${window.location.origin}/auth?token=${token}`;
@@ -236,7 +254,15 @@ export default function AdminUsers() {
 
       {/* CREATE USER BUTTON */}
       <button
-        onClick={() => setEditingUser({} as UserRow)}
+        onClick={() => {
+          console.log("[CLIENT] Opening create user modal");
+          setEditEmail("");
+          setEditFirstName("");
+          setEditLastName("");
+          setEditPhone("");
+          setEditAddress("");
+          setEditingUser({} as UserRow);
+        }}
         className="w-full mb-6 py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
       >
         <span>+</span> Create New User
@@ -454,13 +480,21 @@ export default function AdminUsers() {
               ) : (
                 <button
                   onClick={async () => {
-                    setEmail(editEmail);
-                    setFirstName(editFirstName);
-                    setLastName(editLastName);
-                    setPhone(editPhone);
-                    setAddress(editAddress);
+                    console.log("[CLIENT] Create button clicked", {
+                      editEmail,
+                      editFirstName,
+                      editLastName,
+                      editPhone,
+                      editAddress,
+                    });
+                    await createUser({
+                      email: editEmail,
+                      first_name: editFirstName,
+                      last_name: editLastName,
+                      phone: editPhone,
+                      address: editAddress,
+                    });
                     setEditingUser(null);
-                    await createUser();
                   }}
                   className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white rounded-lg font-semibold transition"
                 >

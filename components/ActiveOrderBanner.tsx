@@ -187,14 +187,16 @@ export default function ActiveOrderBanner() {
      5. ETA TIMER (for both preparing and out_for_delivery)
   ----------------------------------------------------------- */
   useEffect(() => {
-    if (!order?.eta_minutes) return;
+    // guard nulls
+    if (!order || order.eta_minutes == null) return;
 
     // Use stored timestamp (out_for_delivery_at reused as "started_at" for preparing)
     const referenceTime = order.out_for_delivery_at || new Date().toISOString();
 
     const compute = () => {
       const start = new Date(referenceTime).getTime();
-      const etaMs = order.eta_minutes * 60000;
+      const etaMinutes = order.eta_minutes ?? 0;
+      const etaMs = etaMinutes * 60000;
       const diff = Math.max(0, start + etaMs - Date.now());
       setRemaining(diff);
     };
@@ -202,7 +204,7 @@ export default function ActiveOrderBanner() {
     compute();
     const t = window.setInterval(compute, 1000);
     return () => clearInterval(t);
-  }, [order?.out_for_delivery_at, order?.eta_minutes, order?.status]);
+  }, [order?.out_for_delivery_at, order?.eta_minutes, order?.status, order]);
 
   /* -----------------------------------------------------------
      6. SHAKE ANIMATION

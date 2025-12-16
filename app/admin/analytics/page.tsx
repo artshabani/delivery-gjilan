@@ -102,15 +102,22 @@ export default function AnalyticsDashboard() {
           console.error("Items error:", itemsRes.error);
           setTopGroceryProducts([]);
         } else {
-          const items = itemsRes.data || [];
+          const items = (itemsRes.data || []) as any[];
           const productMap: Record<string, { quantity: number; image?: string }> = {};
 
           items.forEach((item: any) => {
-            if (item.product?.name) {
-              if (!productMap[item.product.name]) {
-                productMap[item.product.name] = { quantity: 0, image: item.product.image_url };
+            const productName = Array.isArray(item.product)
+              ? item.product[0]?.name
+              : item.product?.name;
+            const productImage = Array.isArray(item.product)
+              ? item.product[0]?.image_url
+              : item.product?.image_url;
+
+            if (productName) {
+              if (!productMap[productName]) {
+                productMap[productName] = { quantity: 0, image: productImage };
               }
-              productMap[item.product.name].quantity += item.quantity || 1;
+              productMap[productName].quantity += item.quantity || 1;
             }
           });
 
@@ -249,7 +256,7 @@ export default function AnalyticsDashboard() {
       }
 
       const items = data || [];
-      setOrderItems(prev => ({ ...prev, [orderId]: items }));
+      setOrderItems(prev => ({ ...prev, [orderId]: items as any }));
 
       // Calculate profit for each item
       let totalOrderProfit = 0;
@@ -279,7 +286,9 @@ export default function AnalyticsDashboard() {
           totalOrderProfit += profit;
 
           itemProfits.push({
-            itemName: item.product?.name || "Unknown",
+            itemName: (Array.isArray((item as any).product)
+              ? (item as any).product[0]?.name
+              : (item as any).product?.name) || "Unknown",
             quantity: item.quantity,
             revenue,
             cost,
@@ -288,7 +297,9 @@ export default function AnalyticsDashboard() {
         } else {
           // Restaurant items have no profit tracking
           itemProfits.push({
-            itemName: item.restaurant_item?.name || "Unknown",
+            itemName: (Array.isArray((item as any).restaurant_item)
+              ? (item as any).restaurant_item[0]?.name
+              : (item as any).restaurant_item?.name) || "Unknown",
             quantity: item.quantity,
             revenue: item.price * item.quantity,
             cost: 0,
@@ -676,8 +687,15 @@ export default function AnalyticsDashboard() {
             <div className="p-6 space-y-4">
               {orderItems[selectedOrderModal] && orderItems[selectedOrderModal].length > 0 ? (
                 orderItems[selectedOrderModal].map((item: OrderItem, idx: number) => {
+                  const itemNameModal = Array.isArray((item as any).product)
+                    ? (item as any).product[0]?.name
+                    : (item as any).product?.name;
+                  const itemNameRestaurantModal = Array.isArray((item as any).restaurant_item)
+                    ? (item as any).restaurant_item[0]?.name
+                    : (item as any).restaurant_item?.name;
+
                   const itemProfit = orderProfits[selectedOrderModal]?.itemProfits.find(
-                    (p) => p.itemName === (item.product?.name || item.restaurant_item?.name)
+                    (p) => p.itemName === (itemNameModal || itemNameRestaurantModal)
                   );
                   
                   return (
@@ -685,28 +703,29 @@ export default function AnalyticsDashboard() {
                       <div className="flex gap-4">
                         {/* Item Image */}
                         <div className="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                          {item.product?.image_url && item.product.image_url.startsWith("http") ? (
-                            <img 
-                              src={item.product.image_url}
-                              alt={item.product.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : item.restaurant_item?.image_url && item.restaurant_item.image_url.startsWith("http") ? (
-                            <img 
-                              src={item.restaurant_item.image_url}
-                              alt={item.restaurant_item.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-4xl">{item.item_type === "restaurant" ? "🍽️" : "🛒"}</span>
-                          )}
+                          {(() => {
+                            const productImage = Array.isArray((item as any).product)
+                              ? (item as any).product[0]?.image_url
+                              : (item as any).product?.image_url;
+                            const restaurantImage = Array.isArray((item as any).restaurant_item)
+                              ? (item as any).restaurant_item[0]?.image_url
+                              : (item as any).restaurant_item?.image_url;
+
+                            const src = productImage || restaurantImage;
+                            if (src && typeof src === "string" && src.startsWith("http")) {
+                              return (
+                                <img src={src} alt={itemNameModal || itemNameRestaurantModal || "Item"} className="w-full h-full object-cover" />
+                              );
+                            }
+                            return <span className="text-4xl">{item.item_type === "restaurant" ? "🍽️" : "🛒"}</span>;
+                          })()}
                         </div>
 
                         {/* Item Info */}
                         <div className="flex-1 p-4">
                           <div className="flex items-start justify-between mb-2">
                             <p className="text-white font-semibold text-lg">
-                              {item.product?.name || item.restaurant_item?.name || "Unknown Item"}
+                              {itemNameModal || itemNameRestaurantModal || "Unknown Item"}
                             </p>
                             {itemProfit && itemProfit.profit > 0 && (
                               <span className="text-emerald-400 text-sm font-semibold bg-emerald-900/30 px-2 py-1 rounded">

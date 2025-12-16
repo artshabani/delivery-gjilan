@@ -176,12 +176,12 @@ export default function AnalyticsDashboard() {
         }> = [];
 
         for (const item of items) {
-          const productName = Array.isArray(item.product)
-            ? item.product[0]?.name
-            : item.product?.name;
-          const restaurantName = Array.isArray(item.restaurant_item)
-            ? item.restaurant_item[0]?.name
-            : item.restaurant_item?.name;
+          const productName = Array.isArray((item as any).product)
+            ? (item as any).product[0]?.name
+            : (item as any).product?.name;
+          const restaurantName = Array.isArray((item as any).restaurant_item)
+            ? (item as any).restaurant_item[0]?.name
+            : (item as any).restaurant_item?.name;
 
           if (item.item_type === "grocery" && item.product_id) {
             const { data: costData } = await supabase

@@ -7,6 +7,7 @@ import CartOverlay from "@/components/cart/CartOverlay";
 import { Analytics } from '@vercel/analytics/next';
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 import SiteClosedOverlay from "@/components/SiteClosedOverlay";
+import Snowfall from "@/components/Snowfall";
 
 
 export const metadata = {
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <ClientProviders>
+          <Snowfall />
           {children}
           <Analytics />
           {/* 🔥 Global cart badge + popup on every page */}

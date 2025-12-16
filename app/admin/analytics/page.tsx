@@ -176,6 +176,13 @@ export default function AnalyticsDashboard() {
         }> = [];
 
         for (const item of items) {
+          const productName = Array.isArray(item.product)
+            ? item.product[0]?.name
+            : item.product?.name;
+          const restaurantName = Array.isArray(item.restaurant_item)
+            ? item.restaurant_item[0]?.name
+            : item.restaurant_item?.name;
+
           if (item.item_type === "grocery" && item.product_id) {
             const { data: costData } = await supabase
               .from("product_store_costs")
@@ -192,7 +199,7 @@ export default function AnalyticsDashboard() {
             totalOrderProfit += profit;
 
             itemProfits.push({
-              itemName: item.product?.name || "Unknown",
+              itemName: productName || "Unknown",
               quantity: item.quantity,
               revenue,
               cost,
@@ -200,7 +207,7 @@ export default function AnalyticsDashboard() {
             });
           } else {
             itemProfits.push({
-              itemName: item.restaurant_item?.name || "Unknown",
+              itemName: restaurantName || "Unknown",
               quantity: item.quantity,
               revenue: item.price * item.quantity,
               cost: 0,

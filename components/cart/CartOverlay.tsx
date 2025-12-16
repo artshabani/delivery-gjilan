@@ -16,6 +16,7 @@ export default function CartOverlay() {
     totalQuantity,
     subtotal,
     restaurantMixFee,
+    transportationFee,
     totalPrice,
     courierMessage,
     setCourierMessage,
@@ -385,6 +386,19 @@ export default function CartOverlay() {
                             Tarifa 2 vendesh
                           </span>
                           <span className="text-yellow-300 font-medium">+€{restaurantMixFee.toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      {transportationFee > 0 && (
+                        <div className="flex justify-between items-start text-xs bg-blue-500/5 border border-blue-500/30 rounded-lg p-2 group relative">
+                          <span className="text-blue-300 flex items-center gap-1.5">
+                            <Info size={14} />
+                            Transporti
+                          </span>
+                          <span className="text-blue-300 font-medium">+€{transportationFee.toFixed(2)}</span>
+                          <div className="absolute hidden group-hover:block bottom-full left-0 mb-2 px-3 py-2 bg-slate-800 border border-white/10 rounded-lg text-xs text-white/90 whitespace-nowrap shadow-lg z-10">
+                            Çmim promocional për tani
+                          </div>
                         </div>
                       )}
 

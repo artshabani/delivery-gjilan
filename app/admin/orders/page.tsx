@@ -20,7 +20,11 @@ interface OrderType {
     quantity: number;
     price: number;
     notes?: string;
-    product?: { name: string; image_url?: string };
+    product?: { 
+      name: string; 
+      image_url?: string;
+      store_costs?: Array<{ wholesale_price: number }>;
+    };
     restaurant_item?: { name: string; image_url?: string };
   }>;
 }
@@ -38,6 +42,12 @@ export default function AdminOrdersPage() {
   const etaInputRef = useRef<HTMLInputElement | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [showCompleted, setShowCompleted] = useState(false);
+  const [orderProfits, setOrderProfits] = useState<Record<string, number>>({});
+
+  // Helper function to check if order has restaurant items
+  const hasRestaurantItems = (order: OrderType): boolean => {
+    return order.order_items?.some((item) => item.restaurant_item !== null && item.restaurant_item !== undefined) || false;
+  };
 
   const load = useCallback(async (showSpinner = true) => {
     if (showSpinner) setLoading(true);
@@ -101,14 +111,70 @@ export default function AdminOrdersPage() {
   }, []);
 
   /* ---------------------------------------------
+     CALCULATE PROFIT MARGINS
+  --------------------------------------------- */
+  useEffect(() => {
+    const calculateOrderProfit = async (orderId: string) => {
+      try {
+        const { data: items } = await supabase
+          .from("order_items")
+          .select("product_id, quantity, price, item_type")
+          .eq("order_id", orderId);
+
+        if (!items || items.length === 0) return 0;
+
+        let totalProfit = 0;
+
+        for (const item of items) {
+          if (item.product_id && item.item_type === "grocery") {
+            const { data: cost } = await supabase
+              .from("product_store_costs")
+              .select("wholesale_price")
+              .eq("product_id", item.product_id)
+              .eq("store_id", 28)
+              .single();
+
+            if (cost?.wholesale_price) {
+              const profit = (item.price - cost.wholesale_price) * item.quantity;
+              totalProfit += profit;
+            }
+          }
+        }
+
+        return totalProfit;
+      } catch (error) {
+        console.error("Error calculating profit:", error);
+        return 0;
+      }
+    };
+
+    const loadProfits = async () => {
+      if (orders.length === 0) return;
+      
+      const profits: Record<string, number> = {};
+      
+      for (const order of orders) {
+        const profit = await calculateOrderProfit(order.id);
+        profits[order.id] = profit; // Always set profit, even if 0
+      }
+      
+      setOrderProfits(profits);
+    };
+    
+    loadProfits();
+  }, [orders]);
+
+  /* ---------------------------------------------
      UPDATE ORDER STATUS (Optimistic Update)
   --------------------------------------------- */
   async function updateStatus(id: string, status: string, etaMinutes?: number | null) {
     const optimistic = {
       status,
-      eta_minutes: status === "out_for_delivery" ? etaMinutes ?? null : null,
+      eta_minutes: (status === "out_for_delivery" || status === "preparing") ? etaMinutes ?? null : null,
       out_for_delivery_at:
-        status === "out_for_delivery" ? new Date().toISOString() : null,
+        status === "out_for_delivery" || status === "preparing"
+          ? new Date().toISOString()
+          : null,
     };
 
     setOrders((prev) =>
@@ -121,7 +187,7 @@ export default function AdminOrdersPage() {
       body: JSON.stringify({
         id,
         status,
-        eta_minutes: status === "out_for_delivery" ? etaMinutes : undefined,
+        eta_minutes: (status === "out_for_delivery" || status === "preparing") ? etaMinutes : undefined,
       }),
     });
 
@@ -152,12 +218,40 @@ export default function AdminOrdersPage() {
     const styles: Record<string, string> = {
       pending: "bg-amber-700/40 text-amber-100 border border-amber-500/60",
       accepted: "bg-sky-700/40 text-sky-100 border border-sky-500/60",
+      preparing: "bg-purple-700/40 text-purple-100 border border-purple-500/60",
       out_for_delivery: "bg-green-700/40 text-green-100 border border-green-500/60",
       delivered: "bg-slate-700/60 text-slate-100 border border-slate-500/60",
       canceled: "bg-red-700/40 text-red-100 border border-red-500/60",
     };
     const cls = styles[status] || "bg-slate-700/60 text-white border border-slate-500/60";
-    return <span className={`px-2 py-1 rounded-full text-xs font-semibold ${cls}`}>{label}</span>;
+    return <span className={`px-3 py-2 rounded-lg text-sm font-semibold ${cls}`}>{label}</span>;
+  };
+
+  const getStatusFlow = (order: OrderType) => {
+    const hasRestaurant = hasRestaurantItems(order);
+    
+    if (hasRestaurant) {
+      // Full workflow with preparing step for restaurant orders
+      const flows: Record<string, { current: number; steps: string[] }> = {
+        pending: { current: 0, steps: ["Pending", "Accepted", "Preparing", "Out", "Delivered"] },
+        accepted: { current: 1, steps: ["Pending", "Accepted", "Preparing", "Out", "Delivered"] },
+        preparing: { current: 2, steps: ["Pending", "Accepted", "Preparing", "Out", "Delivered"] },
+        out_for_delivery: { current: 3, steps: ["Pending", "Accepted", "Preparing", "Out", "Delivered"] },
+        delivered: { current: 4, steps: ["Pending", "Accepted", "Preparing", "Out", "Delivered"] },
+        canceled: { current: 0, steps: ["❌ Canceled"] },
+      };
+      return flows[order.status] || flows.pending;
+    } else {
+      // Simplified workflow without preparing step for grocery-only orders
+      const flows: Record<string, { current: number; steps: string[] }> = {
+        pending: { current: 0, steps: ["Pending", "Accepted", "Out", "Delivered"] },
+        accepted: { current: 1, steps: ["Pending", "Accepted", "Out", "Delivered"] },
+        out_for_delivery: { current: 2, steps: ["Pending", "Accepted", "Out", "Delivered"] },
+        delivered: { current: 3, steps: ["Pending", "Accepted", "Out", "Delivered"] },
+        canceled: { current: 0, steps: ["❌ Canceled"] },
+      };
+      return flows[order.status] || flows.pending;
+    }
   };
 
   /* ---------------------------------------------
@@ -175,210 +269,137 @@ export default function AdminOrdersPage() {
 
   return (
     <AdminGuard>
-    <div className="min-h-screen w-full bg-black text-white p-4 sm:p-6">
-      {/* NAVIGATION BUTTONS */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
-        <a
-          href="/admin/users"
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-blue-500/50 hover:scale-105"
-        >
-          <span className="text-xl">👥</span>
-          <span>Users</span>
-        </a>
-        <a
-          href="/admin/orders"
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-green-500/50 hover:scale-105"
-        >
-          <span className="text-xl">📦</span>
-          <span>Orders</span>
-        </a>
-        <a
-          href="/admin/products"
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-purple-500/50 hover:scale-105"
-        >
-          <span className="text-xl">🏷️</span>
-          <span>Products</span>
-        </a>
-        <Link
-          href="/admin/restaurants"
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-indigo-500/50 hover:scale-105"
-        >
-          <span className="text-xl">🍽️</span>
-          <span>Restaurants</span>
-        </Link>
-        <a
-          href="/admin/analytics"
-          className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-br from-cyan-600 to-cyan-700 hover:from-cyan-500 hover:to-cyan-600 text-white rounded-xl text-sm font-semibold transition-all shadow-lg hover:shadow-cyan-500/50 hover:scale-105"
-        >
-          <span className="text-xl">📊</span>
-          <span>Analytics</span>
-        </a>
-      </div>
-
-      {/* HEADER */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white">🚗 Driver Dashboard</h1>
-        <p className="text-white/60 text-sm mt-1">Active deliveries & orders</p>
-      </div>
-
-      {/* ACTIVE ORDERS SECTION */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-            Active Orders ({activeOrders.length})
-          </h2>
-        </div>
-
-        {/* DRIVER CARDS - ACTIVE ORDERS */}
-        <div className="space-y-3">
-          {activeOrders.length === 0 ? (
-            <div className="text-center py-12 text-white/60">
-              <p className="text-lg">No active orders</p>
+    <div className="min-h-screen w-full bg-black text-white pb-20">
+      {/* MOBILE HEADER - Sticky at top */}
+      <div className="sticky top-0 z-40 bg-black border-b border-white/10 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">🚗 Orders</h1>
+            <p className="text-white/50 text-xs mt-0.5">{activeOrders.length} active</p>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-white/70">
+              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
-          ) : (
-            activeOrders.map((o) => {
-              const isPending = o.status === "pending";
-              const isAccepted = o.status === "accepted";
-              const isOut = o.status === "out_for_delivery";
-              const cardClass = isPending
-                ? "border-l-4 border-l-yellow-500 bg-yellow-500/10"
-                : isAccepted
-                  ? "border-l-4 border-l-blue-500 bg-blue-500/10"
-                  : isOut
-                    ? "border-l-4 border-l-green-500 bg-green-500/10"
-                    : "border-l-4 border-l-slate-600 bg-slate-800/40";
-              
-              const remaining = getRemainingMs(o);
-              return (
-                <div key={o.id} className={`rounded-lg p-4 border border-white/10 ${cardClass} flex flex-col gap-3`}>
-                  {/* Header: Customer Name & Total */}
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="text-xl font-bold text-white">
+          </div>
+        </div>
+      </div>
+
+      {/* MAIN CONTENT - Scrollable */}
+      <div className="px-4 py-4 space-y-3">
+        {/* ACTIVE ORDERS */}
+        {activeOrders.length === 0 ? (
+          <div className="text-center py-16 text-white/50">
+            <p className="text-lg font-semibold">✓ No active orders</p>
+            <p className="text-sm mt-2">Great work! All orders complete.</p>
+          </div>
+        ) : (
+          activeOrders.map((o) => {
+            const flow = getStatusFlow(o);
+            const remaining = getRemainingMs(o);
+            
+            return (
+              <div key={o.id} className="bg-slate-900/50 border border-white/10 rounded-xl overflow-hidden">
+                {/* ORDER HEADER - Customer & Amount */}
+                <div className="bg-gradient-to-r from-blue-600/30 to-purple-600/30 px-4 py-3 border-b border-white/10">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-white truncate">
                         {o.user?.first_name || "Unknown"} {o.user?.last_name || ""}
-                      </div>
-                      <div className="text-xs text-white/60 mt-0.5">
+                      </h3>
+                      <p className="text-xs text-white/60">
                         {new Date(o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
+                      </p>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-blue-400">€{o.total?.toFixed(2) || "0.00"}</div>
-                      {isOut && remaining && remaining > 0 && (
-                        <div className="text-xs text-green-400 font-semibold mt-1">
-                          ETA: {formatRemaining(remaining)}
+                      <div className="text-2xl font-bold text-blue-400">
+                        €{o.total?.toFixed(2) || "0.00"}
+                      </div>
+                      {orderProfits[o.id] !== undefined ? (
+                        orderProfits[o.id] > 0 ? (
+                          <div className="text-xs text-emerald-400 font-semibold">
+                            💰 +€{orderProfits[o.id].toFixed(2)}
+                          </div>
+                        ) : (
+                          <div className="text-xs text-gray-500 font-semibold">
+                            💰 €0.00
+                          </div>
+                        )
+                      ) : (
+                        <div className="text-xs text-yellow-500/60 font-semibold">
+                          💰 ...
                         </div>
                       )}
                     </div>
                   </div>
+                </div>
 
-                  {/* Status */}
-                  <div>{statusBadge(o.status)}</div>
-
-                  {/* Quick Status Buttons */}
-                  <div className="flex gap-2 flex-wrap">
-                    {o.status === "pending" && (
-                      <>
-                        <button
-                          onClick={() => updateStatus(o.id, "accepted")}
-                          className="flex-1 min-w-[100px] px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition"
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => updateStatus(o.id, "canceled")}
-                          className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm transition"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    )}
-                    {o.status === "accepted" && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setEtaModal({ id: o.id, status: "out_for_delivery" });
-                            setEtaInput("15");
-                          }}
-                          className="flex-1 min-w-[120px] px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-semibold transition"
-                        >
-                          Out for Delivery
-                        </button>
-                        <button
-                          onClick={() => updateStatus(o.id, "canceled")}
-                          className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm transition"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    )}
-                    {o.status === "out_for_delivery" && (
-                      <>
-                        <button
-                          onClick={() => updateStatus(o.id, "delivered")}
-                          className="flex-1 min-w-[120px] px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition"
-                        >
-                          Delivered
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEtaModal({ id: o.id, status: "out_for_delivery" });
-                            setEtaInput(o.eta_minutes?.toString() || "15");
-                          }}
-                          className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm transition"
-                        >
-                          Update ETA
-                        </button>
-                      </>
-                    )}
-
-                    {/* Manual Status Override Dropdown */}
-                    <select
-                      value={o.status || "pending"}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "out_for_delivery") {
-                          setEtaModal({ id: o.id, status: val });
-                          setEtaInput("15");
-                        } else {
-                          updateStatus(o.id, val);
-                        }
-                      }}
-                      className="px-3 py-2 rounded-lg bg-slate-800/70 border border-slate-600 text-white text-sm hover:bg-slate-700 transition"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="accepted">Accepted</option>
-                      <option value="out_for_delivery">Out for Delivery</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="canceled">Canceled</option>
-                    </select>
+                {/* STATUS PROGRESS BAR */}
+                {o.status !== "canceled" && (
+                  <div className="px-4 py-3 border-b border-white/10">
+                    <div className="flex items-center gap-1 mb-2">
+                      {flow.steps.map((step, i) => (
+                        <React.Fragment key={step}>
+                          <div
+                            className={`flex-1 h-2 rounded-full transition-all ${
+                              i <= flow.current
+                                ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                                : "bg-white/20"
+                            }`}
+                          />
+                          {i < flow.steps.length - 1 && <div className="w-0.5" />}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                    <div className="flex justify-between text-xs text-white/60">
+                      <span>{flow.steps[flow.current]}</span>
+                      <span>{flow.current + 1} / {flow.steps.length}</span>
+                    </div>
                   </div>
+                )}
 
-                  {/* Items Preview */}
+                {/* STATUS BADGE & ETA */}
+                <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between gap-2">
+                  <div>{statusBadge(o.status)}</div>
+                  {o.status === "preparing" && o.eta_minutes && (
+                    <div className="text-sm font-bold text-purple-400 text-right">
+                      ⏱️ {o.eta_minutes} mins prep time
+                    </div>
+                  )}
+                  {o.status === "out_for_delivery" && remaining && remaining > 0 && (
+                    <div className="text-sm font-bold text-green-400 text-right">
+                      ETA: {formatRemaining(remaining)}
+                    </div>
+                  )}
+                </div>
+
+                {/* ITEMS PREVIEW */}
+                <div className="px-4 py-3 border-b border-white/10">
                   <button
                     onClick={() => setExpanded(expanded === o.id ? null : o.id)}
-                    className="w-full py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-sm transition"
+                    className="w-full py-2 text-white/70 hover:text-white text-sm font-medium transition"
                   >
-                    {expanded === o.id ? "Hide Items" : `Show Items (${o.order_items?.length || 0})`}
+                    {expanded === o.id ? "▼" : "▶"} Items ({o.order_items?.length || 0})
                   </button>
-
+                  
                   {expanded === o.id && (
-                    <div className="bg-black/40 rounded-lg p-3 space-y-2 max-h-60 overflow-y-auto">
+                    <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
                       {o.order_items?.map((item) => {
                         const product = item.product || item.restaurant_item;
                         const itemTotal = (item.price || 0) * (item.quantity || 1);
+                        
                         return (
-                          <div key={item.id} className="text-sm text-white/70">
-                            <div className="flex justify-between">
-                              <span className="font-medium text-white">{product?.name || "Item"}</span>
-                              <span className="text-blue-400 font-semibold">€{itemTotal.toFixed(2)}</span>
+                          <div key={item.id} className="bg-black/40 rounded-lg p-2 text-sm">
+                            <div className="flex justify-between items-start gap-2">
+                              <span className="font-medium text-white flex-1">{product?.name || "Item"}</span>
+                              <span className="text-blue-400 font-bold">€{itemTotal.toFixed(2)}</span>
                             </div>
-                            <div className="text-xs text-white/50 mt-0.5">
+                            <div className="text-xs text-white/50 mt-1">
                               {item.quantity} × €{item.price?.toFixed(2) || "0.00"}
                             </div>
                             {item.notes && item.notes !== "EMPTY" && item.notes.trim() && (
-                              <div className="text-xs text-yellow-400 italic mt-1">
-                                {item.notes}
+                              <div className="text-xs text-yellow-400 italic mt-1 border-l-2 border-yellow-400/50 pl-2">
+                                📝 {item.notes}
                               </div>
                             )}
                           </div>
@@ -387,109 +408,256 @@ export default function AdminOrdersPage() {
                     </div>
                   )}
                 </div>
-              );
-            })
-          )}
-        </div>
-      </div>
 
-      {/* COMPLETED ORDERS TOGGLE SECTION */}
-      {completedOrders.length > 0 && (
-        <div className="mb-8">
-          <button
-            onClick={() => setShowCompleted(!showCompleted)}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-slate-800/50 hover:bg-slate-800/70 border border-white/10 transition mb-4"
-          >
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span className="w-3 h-3 bg-slate-500 rounded-full"></span>
-              Completed Orders ({completedOrders.length})
-            </h2>
-            <span className="text-white/60">{showCompleted ? "▼" : "▶"}</span>
-          </button>
+                {/* ACTION BUTTONS - LARGE & MOBILE-FRIENDLY */}
+                <div className="px-4 py-4 space-y-2">
+                  {o.status === "pending" && (
+                    <>
+                      <button
+                        onClick={() => updateStatus(o.id, "accepted")}
+                        className="w-full py-3 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold text-base transition active:scale-95"
+                      >
+                        ✓ Accept Order
+                      </button>
+                      <button
+                        onClick={() => updateStatus(o.id, "canceled")}
+                        className="w-full py-2 rounded-lg bg-red-600/70 hover:bg-red-600 text-white font-semibold text-sm transition active:scale-95"
+                      >
+                        ✕ Cancel
+                      </button>
+                    </>
+                  )}
 
-          {showCompleted && (
-            <div className="space-y-3">
-              {completedOrders.map((o) => (
-                <div
-                  key={o.id}
-                  className="rounded-lg p-4 border border-white/10 bg-slate-800/30 flex flex-col gap-2 opacity-75"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="text-lg font-bold text-white/80">
-                        {o.user?.first_name || "Unknown"} {o.user?.last_name || ""}
-                      </div>
-                      <div className="text-xs text-white/50 mt-0.5">
-                        {new Date(o.created_at).toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xl font-bold text-white/80">€{o.total?.toFixed(2) || "0.00"}</div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    {statusBadge(o.status)}
-                    <select
-                      value={o.status || "delivered"}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === "out_for_delivery") {
-                          setEtaModal({ id: o.id, status: val });
+                  {o.status === "accepted" && (
+                    <>
+                      {hasRestaurantItems(o) ? (
+                        // Restaurant order - show preparing button with ETA
+                        <button
+                          onClick={() => {
+                            setEtaModal({ id: o.id, status: "preparing" });
+                            setEtaInput("20");
+                          }}
+                          className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-base transition active:scale-95"
+                        >
+                          👨‍🍳 Start Preparing (Set Time)
+                        </button>
+                      ) : (
+                        // Grocery-only order - skip to delivery
+                        <button
+                          onClick={() => {
+                            setEtaModal({ id: o.id, status: "out_for_delivery" });
+                            setEtaInput("15");
+                          }}
+                          className="w-full py-3 rounded-lg bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-base transition active:scale-95"
+                        >
+                          🚗 Ready - Out for Delivery
+                        </button>
+                      )}
+                      <button
+                        onClick={() => updateStatus(o.id, "canceled")}
+                        className="w-full py-2 rounded-lg bg-red-600/70 hover:bg-red-600 text-white font-semibold text-sm transition active:scale-95"
+                      >
+                        ✕ Cancel
+                      </button>
+                    </>
+                  )}
+
+                  {o.status === "preparing" && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setEtaModal({ id: o.id, status: "out_for_delivery" });
                           setEtaInput("15");
-                        } else {
-                          updateStatus(o.id, val);
-                        }
-                      }}
-                      className="px-3 py-1 rounded-lg bg-slate-800/70 border border-slate-600 text-white/80 text-xs hover:bg-slate-700 transition"
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="accepted">Accepted</option>
-                      <option value="out_for_delivery">Out for Delivery</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="canceled">Canceled</option>
-                    </select>
-                  </div>
+                        }}
+                        className="w-full py-3 rounded-lg bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-base transition active:scale-95"
+                      >
+                        🚗 Ready - Out for Delivery
+                      </button>
+                      <button
+                        onClick={() => updateStatus(o.id, "canceled")}
+                        className="w-full py-2 rounded-lg bg-red-600/70 hover:bg-red-600 text-white font-semibold text-sm transition active:scale-95"
+                      >
+                        ✕ Cancel
+                      </button>
+                    </>
+                  )}
+
+                  {o.status === "out_for_delivery" && (
+                    <>
+                      <button
+                        onClick={() => updateStatus(o.id, "delivered")}
+                        className="w-full py-3 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold text-base transition active:scale-95"
+                      >
+                        ✓ Delivered
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEtaModal({ id: o.id, status: "out_for_delivery" });
+                          setEtaInput(o.eta_minutes?.toString() || "15");
+                        }}
+                        className="w-full py-2 rounded-lg bg-blue-600/70 hover:bg-blue-600 text-white font-semibold text-sm transition active:scale-95"
+                      >
+                        ⏱ Update ETA: {o.eta_minutes || "?"} mins
+                      </button>
+                    </>
+                  )}
+
+                  {/* MANUAL STATUS DROPDOWN - Always visible */}
+                  <select
+                    value={o.status || "pending"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "out_for_delivery") {
+                        setEtaModal({ id: o.id, status: val });
+                        setEtaInput("15");
+                      } else {
+                        updateStatus(o.id, val);
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-600 text-white/70 text-xs hover:bg-slate-700 transition cursor-pointer"
+                  >
+                    <option value="pending">Change status...</option>
+                    <option value="pending">← Pending</option>
+                    <option value="accepted">← Accepted</option>
+                    {hasRestaurantItems(o) && <option value="preparing">← Preparing</option>}
+                    <option value="out_for_delivery">← Out for Delivery</option>
+                    <option value="delivered">← Delivered</option>
+                    <option value="canceled">✕ Canceled</option>
+                  </select>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+              </div>
+            );
+          })
+        )}
+
+        {/* COMPLETED ORDERS SECTION */}
+        {completedOrders.length > 0 && (
+          <div className="mt-8 space-y-3">
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-slate-800/50 hover:bg-slate-800/70 border border-white/10 transition"
+            >
+              <h2 className="text-base font-bold text-white/70">
+                {showCompleted ? "▼" : "▶"} Completed ({completedOrders.length})
+              </h2>
+            </button>
+
+            {showCompleted && (
+              <div className="space-y-2">
+                {completedOrders.map((o) => (
+                  <div
+                    key={o.id}
+                    className="bg-slate-900/30 border border-white/5 rounded-lg p-3 opacity-70"
+                  >
+                    <div className="flex justify-between items-start gap-2 mb-2">
+                      <div>
+                        <div className="font-semibold text-white/70">
+                          {o.user?.first_name || "Unknown"} {o.user?.last_name || ""}
+                        </div>
+                        <div className="text-xs text-white/40 mt-0.5">
+                          {new Date(o.created_at).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-white/60">€{o.total?.toFixed(2) || "0.00"}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {statusBadge(o.status)}
+                      <select
+                        value={o.status || "delivered"}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "out_for_delivery") {
+                            setEtaModal({ id: o.id, status: val });
+                            setEtaInput("15");
+                          } else {
+                            updateStatus(o.id, val);
+                          }
+                        }}
+                        className="px-2 py-1 rounded bg-slate-800/70 border border-slate-600 text-white/60 text-xs hover:bg-slate-700 transition cursor-pointer"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="accepted">Accepted</option>
+                        {hasRestaurantItems(o) && <option value="preparing">Preparing</option>}
+                        <option value="out_for_delivery">Out for Delivery</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="canceled">Canceled</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {etaModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-2xl p-5 space-y-4 shadow-2xl">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl p-8 space-y-6 shadow-2xl">
             <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-white">Set ETA</h3>
+              <h3 className="text-3xl font-bold text-white">
+                {etaModal.status === "preparing" ? "⏱️ Prep Time" : "🚗 Delivery ETA"}
+              </h3>
               <button
                 onClick={() => setEtaModal(null)}
-                className="text-white/70 hover:text-white"
+                className="text-white/70 hover:text-white text-3xl transition w-10 h-10 flex items-center justify-center"
               >
                 ✕
               </button>
             </div>
-            <p className="text-sm text-white/70">
-              Enter the estimated minutes for this delivery.
+            <p className="text-lg text-white/70">
+              {etaModal.status === "preparing" 
+                ? "How many minutes to prepare the food?"
+                : "How many minutes until delivery?"}
             </p>
-            <input
-              type="number"
-              min={1}
-              className="w-full p-2 rounded bg-slate-800 border border-slate-700 text-white"
-              value={etaInput}
-              ref={etaInputRef}
-              onChange={(e) => setEtaInput(e.target.value)}
-            />
-            <button
-              onClick={() => {
-                const etaVal = Number(etaInput);
-                if (Number.isNaN(etaVal) || etaVal <= 0) return;
-                updateStatus(etaModal.id, etaModal.status, etaVal);
-                setEtaModal(null);
-              }}
-              className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 font-semibold text-white"
-            >
-              Save ETA
-            </button>
+            <div className="grid grid-cols-3 gap-2">
+              {(etaModal.status === "preparing" ? [10, 15, 20, 25, 30, 45] : [5, 10, 15, 20, 30, 45]).map((mins) => (
+                <button
+                  key={mins}
+                  onClick={() => setEtaInput(mins.toString())}
+                  className={`py-4 rounded-xl font-bold text-base transition ${
+                    etaInput === mins.toString()
+                      ? "bg-blue-600 text-white shadow-lg shadow-blue-500/50"
+                      : "bg-slate-800 text-white/70 hover:bg-slate-700"
+                  }`}
+                >
+                  {mins}m
+                </button>
+              ))}
+            </div>
+            <div>
+              <label className="text-sm text-white/60 block mb-2">Or enter custom minutes:</label>
+              <input
+                type="number"
+                min={1}
+                className="w-full p-4 rounded-xl bg-slate-800 border border-slate-700 text-white text-2xl text-center font-semibold focus:border-blue-500 focus:outline-none transition"
+                value={etaInput}
+                ref={etaInputRef}
+                onChange={(e) => setEtaInput(e.target.value)}
+                placeholder="Enter minutes..."
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => setEtaModal(null)}
+                className="flex-1 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white/70 font-bold text-lg transition active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const etaVal = Number(etaInput);
+                  if (Number.isNaN(etaVal) || etaVal <= 0) return;
+                  updateStatus(etaModal.id, etaModal.status, etaVal);
+                  setEtaModal(null);
+                }}
+                className="flex-1 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold text-lg transition active:scale-95 shadow-lg shadow-blue-500/50"
+              >
+                Save ETA
+              </button>
+            </div>
           </div>
         </div>
       )}

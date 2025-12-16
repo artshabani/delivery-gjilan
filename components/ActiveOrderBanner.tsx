@@ -184,17 +184,17 @@ export default function ActiveOrderBanner() {
   }, [userId, order?.id]);
 
   /* -----------------------------------------------------------
-     5. ETA TIMER
+     5. ETA TIMER (for both preparing and out_for_delivery)
   ----------------------------------------------------------- */
   useEffect(() => {
-    if (!order?.out_for_delivery_at || order.eta_minutes == null) return;
+    if (!order?.eta_minutes) return;
 
-    const outAt = order.out_for_delivery_at;
-    const eta = order.eta_minutes;
+    // Use stored timestamp (out_for_delivery_at reused as "started_at" for preparing)
+    const referenceTime = order.out_for_delivery_at || new Date().toISOString();
 
     const compute = () => {
-      const start = new Date(outAt).getTime();
-      const etaMs = eta * 60000;
+      const start = new Date(referenceTime).getTime();
+      const etaMs = order.eta_minutes * 60000;
       const diff = Math.max(0, start + etaMs - Date.now());
       setRemaining(diff);
     };
@@ -202,7 +202,7 @@ export default function ActiveOrderBanner() {
     compute();
     const t = window.setInterval(compute, 1000);
     return () => clearInterval(t);
-  }, [order?.out_for_delivery_at, order?.eta_minutes]);
+  }, [order?.out_for_delivery_at, order?.eta_minutes, order?.status]);
 
   /* -----------------------------------------------------------
      6. SHAKE ANIMATION
@@ -227,11 +227,11 @@ export default function ActiveOrderBanner() {
 
   /* ETA TEXT */
   const etaText = (() => {
-    if (order.status === "out_for_delivery" && order.eta_minutes) {
+    if ((order.status === "preparing" || order.status === "out_for_delivery") && order.eta_minutes) {
       if (remaining > 0) {
         return `${Math.max(1, Math.ceil(remaining / 60000))} min`;
       }
-      return "Anytime";
+      return order.status === "preparing" ? "Ready!" : "Anytime";
     }
     return order.status.replace(/_/g, " ");
   })();
@@ -239,13 +239,14 @@ export default function ActiveOrderBanner() {
   const statusStyles = {
     pending: { bg: "from-yellow-500 to-amber-500", text: "Prisni korierin", color: "text-yellow-400" },
     accepted: { bg: "from-sky-500 to-blue-500", text: "Porosia u pranua", color: "text-blue-400" },
+    preparing: { bg: "from-purple-500 to-blue-500", text: "Duke përpunuar...", color: "text-purple-400" },
     confirmed: { bg: "from-sky-500 to-blue-500", text: "Preparing order", color: "text-blue-400" },
     out_for_delivery: { bg: "from-green-500 to-emerald-600", text: "Korieri rruges...", color: "text-green-400" },
     delivered: { bg: "from-gray-600 to-slate-700", text: "Delivered", color: "text-gray-400" },
     canceled: { bg: "from-red-500 to-rose-600", text: "Canceled", color: "text-red-400" },
   };
 
-  const palette = statusStyles[order.status as keyof typeof statusStyles];
+  const palette = statusStyles[order.status as keyof typeof statusStyles] || statusStyles.pending;
 
   /* -----------------------------------------------------------
      JSX
@@ -275,14 +276,18 @@ export default function ActiveOrderBanner() {
           <div>
             <p className="text-white font-semibold">Percjell porosine</p>
             <p className="text-white/90 text-sm">
-              {order.status === "out_for_delivery" && order.eta_minutes
-                ? `ETA ${etaText}`
-                : palette.text}
+              {order.status === "preparing" && order.eta_minutes
+                ? `Prep ${etaText}`
+                : order.status === "out_for_delivery" && order.eta_minutes
+                  ? `ETA ${etaText}`
+                  : palette.text}
             </p>
           </div>
 
           <div className="text-right">
-            {order.status === "out_for_delivery" ? (
+            {order.status === "preparing" && order.eta_minutes ? (
+              <p className="text-white font-semibold text-lg">{etaText}</p>
+            ) : order.status === "out_for_delivery" ? (
               <p className="text-white font-semibold text-lg">{etaText}</p>
             ) : (
               <span className="px-3 py-1 rounded-full text-sm font-semibold text-white bg-white/20">
@@ -318,9 +323,11 @@ export default function ActiveOrderBanner() {
                 <p className="text-white/70 text-xs mt-1">{palette.text}</p>
               </div>
 
-              {order.status === "out_for_delivery" && (
+              {(order.status === "out_for_delivery" || order.status === "preparing") && (
                 <div className="text-center">
-                  <p className="text-white/70 text-xs uppercase">ETA</p>
+                  <p className="text-white/70 text-xs uppercase">
+                    {order.status === "preparing" ? "Prep Time" : "ETA"}
+                  </p>
                   <p className="text-2xl font-bold text-white mt-1">{etaText}</p>
                 </div>
               )}

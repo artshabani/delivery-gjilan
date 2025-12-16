@@ -30,6 +30,13 @@ export async function POST(req: Request) {
           ? Number(eta_minutes)
           : null;
       payload.out_for_delivery_at = new Date().toISOString();
+    } else if (status === "preparing") {
+      // Reuse the timestamp column to track when prep started
+      payload.eta_minutes =
+        eta_minutes !== undefined && eta_minutes !== null
+          ? Number(eta_minutes)
+          : null;
+      payload.out_for_delivery_at = new Date().toISOString();
     } else {
       payload.eta_minutes = null;
       payload.out_for_delivery_at = null;

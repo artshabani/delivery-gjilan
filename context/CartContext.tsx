@@ -14,6 +14,7 @@ interface CartContextType {
   totalQuantity: number;
   subtotal: number;
   restaurantMixFee: number;
+  transportationFee: number;
   totalPrice: number;
   courierMessage: string;
   setCourierMessage: (message: string) => void;
@@ -28,6 +29,25 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [courierMessage, setCourierMessage] = useState<string>("");
+  const [transportationFee, setTransportationFee] = useState<number>(0);
+
+  /* -----------------------------------------------
+     Load transportation fee from API
+  ------------------------------------------------ */
+  useEffect(() => {
+    const fetchTransportationFee = async () => {
+      try {
+        const res = await fetch("/api/site/status");
+        if (res.ok) {
+          const data = await res.json();
+          setTransportationFee(Number(data.transportation_fee || 0));
+        }
+      } catch (error) {
+        console.error("Failed to fetch transportation fee:", error);
+      }
+    };
+    fetchTransportationFee();
+  }, []);
 
   /* -----------------------------------------------
      Load from localStorage
@@ -174,9 +194,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const totalQuantity = items.reduce((s, i) => s + i.quantity, 0);
 
   /* -----------------------------------------------
-     Final price with restaurant mix fee
+     Final price with restaurant mix fee + transportation fee
   ------------------------------------------------ */
-  const totalPrice = subtotal + restaurantMixFee;
+  const totalPrice = subtotal + restaurantMixFee + transportationFee;
 
   return (
     <CartContext.Provider
@@ -185,6 +205,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         totalQuantity,
         subtotal,
         restaurantMixFee,
+        transportationFee,
         totalPrice,
         courierMessage,
         setCourierMessage,

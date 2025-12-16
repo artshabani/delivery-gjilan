@@ -70,10 +70,14 @@ export default function EditProductModal({
 
       if (!costsError && costs) {
         const pricesMap: Record<number, string> = {};
+        const storeIds: number[] = [];
         costs.forEach((cost) => {
           pricesMap[cost.store_id] = String(cost.wholesale_price);
+          storeIds.push(cost.store_id);
         });
         setWholesalePrices(pricesMap);
+        // Auto-select stores that have wholesale prices
+        setSelectedStores(storeIds);
       }
       setLoadingPrices(false);
     };

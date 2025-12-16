@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 export default function AdminHomePage() {
   const [closed, setClosed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [transportationFee, setTransportationFee] = useState<string>("0");
+  const [savingFee, setSavingFee] = useState(false);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -13,6 +15,7 @@ export default function AdminHomePage() {
       if (!res.ok) return;
       const data = await res.json();
       setClosed(Boolean(data.closed));
+      setTransportationFee(String(data.transportation_fee || 0));
     };
     fetchStatus();
   }, []);
@@ -26,6 +29,19 @@ export default function AdminHomePage() {
     });
     setClosed((s) => !s);
     setBusy(false);
+  };
+
+  const saveTransportationFee = async () => {
+    setSavingFee(true);
+    const res = await fetch("/api/admin/site/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transportation_fee: Number(transportationFee) }),
+    });
+    setSavingFee(false);
+    if (res.ok) {
+      alert("Transportation fee updated!");
+    }
   };
 
   return (
@@ -47,6 +63,34 @@ export default function AdminHomePage() {
         >
           {busy ? "Saving..." : closed ? "Open the store" : "Close the store"}
         </button>
+
+        {/* Transportation Fee Setting */}
+        <div className="mb-4 p-4 bg-slate-900 border border-white/10 rounded-lg">
+          <label className="block text-sm font-semibold text-white/90 mb-2">
+            Transportation / Service Fee (€)
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={transportationFee}
+              onChange={(e) => setTransportationFee(e.target.value)}
+              className="flex-1 px-4 py-2 bg-slate-800 border border-white/10 text-white rounded-lg focus:outline-none focus:border-blue-500"
+              placeholder="0.00"
+            />
+            <button
+              onClick={saveTransportationFee}
+              disabled={savingFee}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold disabled:opacity-50"
+            >
+              {savingFee ? "Saving..." : "Save"}
+            </button>
+          </div>
+          <p className="text-xs text-white/50 mt-2">
+            This fee will be added to every order. Set to 0 to disable.
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 

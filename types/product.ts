@@ -6,6 +6,7 @@ export interface Product {
 
   // ADD THIS LINE ⬇️
   category_id?: number;
+  sort_order?: number;
 
   // OPTIONAL FIELDS
   restaurant_id?: number;

@@ -53,5 +53,14 @@ export const fetchAvailableProducts = async () => {
       }
   });
   
-  return Array.from(uniqueProductsMap.values());
+  // 4. Sort per-category by (category_id, sort_order)
+  const productsArray = Array.from(uniqueProductsMap.values());
+  productsArray.sort((a, b) => {
+    const ac = a.category_id ?? 0;
+    const bc = b.category_id ?? 0;
+    if (ac !== bc) return ac - bc;
+    return (a.sort_order ?? 999) - (b.sort_order ?? 999);
+  });
+  
+  return productsArray;
 };

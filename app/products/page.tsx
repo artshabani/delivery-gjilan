@@ -93,16 +93,15 @@ export default function ProductsPage() {
 
     const newOrder = arrayMove(categoryProducts, oldIndex, newIndex);
 
-    // Update UI immediately - merge with other categories
+    // Update UI immediately - merge with other categories and update sort_order locally
     const otherProducts = products.filter((p) => p.category_id !== categoryId);
-    setProducts([...otherProducts, ...newOrder]);
+    const reindexed = newOrder.map((p, idx) => ({ ...p, sort_order: idx }));
+    setProducts([...otherProducts, ...reindexed]);
 
-    // Prepare order data with new sort_order values
-    // Calculate the minimum sort_order for this category (if any exist)
-    const minSortOrder = Math.min(...categoryProducts.map(p => p.sort_order || 0));
+    // Prepare order data with new sequential sort_order values (0..n-1)
     const orderData = newOrder.map((product, index) => ({
       id: product.id,
-      sort_order: minSortOrder + index,
+      sort_order: index,
     }));
 
     // Send to backend
@@ -516,11 +515,10 @@ export default function ProductsPage() {
           const subProducts = filterProducts(
             products.filter((p) => p.category_id === sub.id)
           ).sort((a, b) => {
-            // Show sale items first; keep original relative order otherwise
-            const aSale = a.is_on_sale && a.sale_price != null;
-            const bSale = b.is_on_sale && b.sale_price != null;
-            if (aSale === bSale) return 0;
-            return aSale ? -1 : 1;
+            const aSale = a.is_on_sale && a.sale_price != null ? 0 : 1; // sale first
+            const bSale = b.is_on_sale && b.sale_price != null ? 0 : 1;
+            if (aSale !== bSale) return aSale - bSale;
+            return (a.sort_order ?? 0) - (b.sort_order ?? 0);
           });
 
           if (!subProducts.length) return null;

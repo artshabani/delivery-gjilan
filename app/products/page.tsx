@@ -47,6 +47,8 @@ export default function ProductsPage() {
 
   const sectionRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  // Prevent observer thrashing during programmatic scrolls
+  const isAutoScrollingRef = useRef(false);
 
   /* ---------------- WAIT FOR USER ID ---------------- */
   useEffect(() => {
@@ -96,9 +98,11 @@ export default function ProductsPage() {
     setProducts([...otherProducts, ...newOrder]);
 
     // Prepare order data with new sort_order values
+    // Calculate the minimum sort_order for this category (if any exist)
+    const minSortOrder = Math.min(...categoryProducts.map(p => p.sort_order || 0));
     const orderData = newOrder.map((product, index) => ({
       id: product.id,
-      sort_order: index,
+      sort_order: minSortOrder + index,
     }));
 
     // Send to backend
@@ -196,6 +200,8 @@ export default function ProductsPage() {
 
     const observer = new IntersectionObserver(
       (entries) => {
+        // Ignore observer updates while we're scrolling via navigation
+        if (isAutoScrollingRef.current) return;
         const visible = entries
           .filter((e) => e.isIntersecting)
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
@@ -217,7 +223,7 @@ export default function ProductsPage() {
     });
 
     return () => observer.disconnect();
-  }, [visibleSubCats]);
+  }, [visibleSubCats, search, products]);
 
   /* ---------------- LAZY LOAD ---------------- */
   useEffect(() => {
@@ -248,10 +254,15 @@ export default function ProductsPage() {
   const scrollToSubcategory = (subId: number) => {
     const el = sectionRefs.current[subId];
     if (!el) return;
+    isAutoScrollingRef.current = true;
     window.scrollTo({
       top: el.offsetTop - 160,
       behavior: "smooth",
     });
+    // Allow observer updates after scroll settles
+    window.setTimeout(() => {
+      isAutoScrollingRef.current = false;
+    }, 500);
   };
 
   // When searching, scroll to the first subcategory that has results

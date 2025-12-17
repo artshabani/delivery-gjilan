@@ -104,10 +104,19 @@ function CategoryItem({ category, onEdit, onDelete, getParentName, getSubcategor
                 <span className="text-white/60">Sort:</span>
                 <span className="text-white font-semibold">{category.sort_order}</span>
               </div>
+              {category.parent_id === null ? (
+                <div className="flex items-center gap-1 px-2 py-1 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                  <span className="text-blue-200">🏠 Root Category</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/20 rounded-lg border border-purple-500/30">
+                  <span className="text-purple-200">📁 Subcategory</span>
+                </div>
+              )}
               {category.parent_id === null && (
-                <div className="flex items-center gap-1 px-2 py-1 bg-white/5 rounded-lg">
-                  <span className="text-white/60">Subcategories:</span>
-                  <span className="text-white font-semibold">{getSubcategoryCount(category.id)}</span>
+                <div className="flex items-center gap-1 px-2 py-1 bg-green-500/20 rounded-lg border border-green-500/30">
+                  <span className="text-green-200">Subs:</span>
+                  <span className="text-green-200 font-semibold">{getSubcategoryCount(category.id)}</span>
                 </div>
               )}
             </div>
@@ -264,16 +273,27 @@ export default function AdminCategories() {
     setCategories(updatedCategories);
 
     // Send to API
-    await fetch("/api/admin/categories/reorder", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        categories: reordered.map((cat) => ({
-          id: cat.id,
-          sort_order: cat.sort_order,
-        })),
-      }),
-    });
+    try {
+      const res = await fetch("/api/admin/categories/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          categories: reordered.map((cat) => ({
+            id: cat.id,
+            sort_order: cat.sort_order,
+          })),
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || "Failed to reorder categories");
+      }
+    } catch (error: any) {
+      console.error("Error reordering categories:", error);
+      // Revert on error
+      fetchCategories();
+    }
   };
 
   // Open edit modal

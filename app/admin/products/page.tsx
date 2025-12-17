@@ -32,8 +32,8 @@ export default function AdminProductsPage() {
 
   // ---------- LOAD DATA (useCallback FIXES THE useEffect ERROR) ----------
   const load = useCallback(async () => {
-    const { data: prod } = await supabase.from("products").select("*");
-    const { data: cats } = await supabase.from("product_categories").select("*");
+    const { data: prod } = await supabase.from("products").select("*").order("sort_order", { ascending: true });
+    const { data: cats } = await supabase.from("product_categories").select("*").order("sort_order", { ascending: true });
     const { data: storeData } = await supabase.from("stores").select("*");
 
     setProducts(prod || []);
@@ -47,16 +47,20 @@ export default function AdminProductsPage() {
 
   // ---------- FILTERING ----------
   const filteredProducts = products.filter((p) => {
-    const s = debouncedSearch.toLowerCase();
+    const s = debouncedSearch.toLowerCase().trim();
     const cat =
       categories.find((c) => c.id === p.category_id)?.name.toLowerCase() || "";
 
     // Category filter
-    if (selectedCategory && p.category_id !== selectedCategory) {
+    if (selectedCategory && p.category_id !== Number(selectedCategory)) {
       return false;
     }
 
-    // Search filter
+    // Search filter - if no search, show all (for selected category)
+    if (!s) {
+      return true;
+    }
+
     return (
       p.name.toLowerCase().includes(s) ||
       String(p.price).includes(s) ||
@@ -136,9 +140,9 @@ export default function AdminProductsPage() {
           onChange={(e) => setSelectedCategory(e.target.value || null)}
           className="p-3 rounded-lg bg-slate-800/50 border border-white/10 text-white focus:outline-none focus:border-blue-500/50 transition cursor-pointer sm:w-64"
         >
-          <option value="">All Categories ({products.length})</option>
+          <option value="">All Categories ({filteredProducts.length})</option>
           {categories.map((cat) => {
-            const count = products.filter((p) => p.category_id === cat.id).length;
+            const count = filteredProducts.filter((p) => p.category_id === cat.id).length;
             return (
               <option key={cat.id} value={cat.id}>
                 {cat.name} ({count})

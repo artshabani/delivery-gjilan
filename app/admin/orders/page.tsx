@@ -273,9 +273,18 @@ export default function AdminOrdersPage() {
       {/* MOBILE HEADER - Sticky at top */}
       <div className="sticky top-0 z-40 bg-black border-b border-white/10 px-4 py-3">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">🚗 Orders</h1>
-            <p className="text-white/50 text-xs mt-0.5">{activeOrders.length} active</p>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/admin"
+              className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-white text-xs font-semibold transition"
+              title="Back to Admin"
+            >
+              ← Admin
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-white">🚗 Orders</h1>
+              <p className="text-white/50 text-xs mt-0.5">{activeOrders.length} active</p>
+            </div>
           </div>
           <div className="text-right">
             <div className="text-sm text-white/70">

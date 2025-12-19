@@ -39,7 +39,7 @@ window.dispatchEvent(new Event("dg_user_id-set"));
         .single();
 
       if (profile?.role === "admin") {
-        router.push("/admin");
+        router.push("/admin/orders");
       } else {
         router.push("/");
       }

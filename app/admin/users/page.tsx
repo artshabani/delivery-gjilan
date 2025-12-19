@@ -299,76 +299,101 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {/* USERS LIST - MOBILE FRIENDLY CARDS */}
-      <div className="space-y-3">
-        {users
-          .filter((u) => {
-            const s = search.toLowerCase();
-            return (
-              u.email.toLowerCase().includes(s) ||
-              (u.first_name || "").toLowerCase().includes(s) ||
-              (u.last_name || "").toLowerCase().includes(s) ||
-              (u.phone || "").toLowerCase().includes(s) ||
-              (u.address || "").toLowerCase().includes(s)
-            );
-          })
-          .map((u) => (
-            <div
-              key={u.id}
-              className="bg-slate-800/40 border border-white/10 rounded-lg p-4 hover:bg-slate-800/60 transition"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="flex-1">
-                  <div className="text-lg font-bold text-white">
-                    {u.first_name || "Unknown"} {u.last_name || ""}
-                  </div>
-                  <div className="text-sm text-white/60">{u.email}</div>
-                  {u.phone && (
-                    <div className="text-sm text-white/50 mt-1">📱 {u.phone}</div>
-                  )}
-                  {u.address && (
-                    <div className="text-sm text-white/50 mt-1">📍 {u.address}</div>
-                  )}
-                </div>
-              </div>
+      {/* USERS TABLE */}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[800px]">
+          <thead>
+            <tr className="bg-slate-800/60 border border-white/10">
+              <th className="text-left p-4 text-white font-semibold rounded-tl-lg">Name</th>
+              <th className="text-left p-4 text-white font-semibold">Email</th>
+              <th className="text-left p-4 text-white font-semibold">Phone</th>
+              <th className="text-left p-4 text-white font-semibold">Address</th>
+              <th className="text-center p-4 text-white font-semibold rounded-tr-lg">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users
+              .filter((u) => {
+                const s = search.toLowerCase();
+                return (
+                  u.email.toLowerCase().includes(s) ||
+                  (u.first_name || "").toLowerCase().includes(s) ||
+                  (u.last_name || "").toLowerCase().includes(s) ||
+                  (u.phone || "").toLowerCase().includes(s) ||
+                  (u.address || "").toLowerCase().includes(s)
+                );
+              })
+              .map((u, index, arr) => (
+                <tr
+                  key={u.id}
+                  className={`bg-slate-800/20 hover:bg-slate-800/40 border-b border-white/5 transition ${
+                    index === arr.length - 1 ? "border-b-0" : ""
+                  }`}
+                >
+                  <td className="p-4">
+                    <div className="text-white font-semibold">
+                      {u.first_name || "Unknown"} {u.last_name || ""}
+                    </div>
+                    <div className="text-xs text-white/50 mt-1">ID: {u.id.slice(0, 8)}...</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="text-white/80">{u.email}</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="text-white/80">
+                      {u.phone || <span className="text-white/40 italic">No phone</span>}
+                    </div>
+                  </td>
+                  <td className="p-4 max-w-[200px]">
+                    <div className="text-white/80 truncate" title={u.address || ""}>
+                      {u.address || <span className="text-white/40 italic">No address</span>}
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex gap-1 justify-center flex-wrap">
+                      <button
+                        onClick={() => showQrForUser(u.id)}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-xs font-semibold transition"
+                        title="Show QR Code"
+                      >
+                        QR
+                      </button>
+                      <button
+                        onClick={() => loadHistory(u)}
+                        className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-md text-xs font-semibold transition"
+                        title="View Order History"
+                      >
+                        History
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingUser(u);
+                          setEditEmail(u.email || "");
+                          setEditFirstName(u.first_name || "");
+                          setEditLastName(u.last_name || "");
+                          setEditPhone(u.phone || "");
+                          setEditAddress(u.address || "");
+                        }}
+                        className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded-md text-xs font-semibold transition"
+                        title="Edit User"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setDeleteUserId(u.id)}
+                        className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-md text-xs font-semibold transition"
+                        title="Delete User"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => showQrForUser(u.id)}
-                  className="flex-1 min-w-[80px] px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-semibold transition"
-                >
-                  QR
-                </button>
-                <button
-                  onClick={() => loadHistory(u)}
-                  className="flex-1 min-w-[80px] px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-sm font-semibold transition"
-                >
-                  History
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingUser(u);
-                    setEditEmail(u.email || "");
-                    setEditFirstName(u.first_name || "");
-                    setEditLastName(u.last_name || "");
-                    setEditPhone(u.phone || "");
-                    setEditAddress(u.address || "");
-                  }}
-                  className="px-3 py-2 bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg text-sm transition"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => setDeleteUserId(u.id)}
-                  className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-sm transition"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-
+        {/* No results message */}
         {users.filter((u) => {
           const s = search.toLowerCase();
           return (
@@ -379,8 +404,9 @@ export default function AdminUsers() {
             (u.address || "").toLowerCase().includes(s)
           );
         }).length === 0 && (
-          <div className="text-center py-12 text-white/60">
+          <div className="text-center py-12 text-white/60 bg-slate-800/20 rounded-lg border border-white/10 mt-4">
             <p className="text-lg">No users found</p>
+            <p className="text-sm text-white/40 mt-2">Try adjusting your search criteria</p>
           </div>
         )}
       </div>

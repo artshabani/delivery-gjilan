@@ -171,7 +171,7 @@ export default function ProductCard({
             onClick={inc}
             className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold shadow hover:bg-blue-500 active:scale-95"
           >
-            Add
+            Shto
           </button>
         </div>
       </div>

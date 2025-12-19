@@ -7,6 +7,7 @@ import { Category } from "@/types/category";
 import { Product } from "@/types/product";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { Search, UtensilsCrossed, Store } from "lucide-react";
 import { fetchAvailableProducts } from "@/lib/productFetch";
 import {
   DndContext,
@@ -159,25 +160,64 @@ export default function ProductsPage() {
       )
       .subscribe();
 
+    // Listen for category changes (reordering, updates)
+    const categoryChannel = supabase
+      .channel("category_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: "public",
+          table: "product_categories",
+        },
+        () => {
+          // Reload categories when they change
+          const reloadCategories = async () => {
+            const { data: catData } = await supabase
+              .from("product_categories")
+              .select("*")
+              .order("sort_order");
+            setCategories(catData || []);
+          };
+          reloadCategories();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(storeStatusChannel);
+      supabase.removeChannel(categoryChannel);
     };
   }, [userId]);
 
   /* ---------------- CATEGORY LOGIC ---------------- */
-  const level1Cats = categories.filter((c) => c.parent_id === null);
+  const level1Cats = useMemo(() => 
+    categories.filter((c) => c.parent_id === null).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+    [categories]
+  );
   const subCatsRaw = categories.filter((c) => c.parent_id !== null);
 
   const subCats = useMemo(
     () =>
       [...subCatsRaw].sort((a, b) => {
-        if (a.parent_id !== b.parent_id)
-          return (a.parent_id ?? 0) - (b.parent_id ?? 0);
+        // First get the parent categories and their sort orders
+        const parentA = level1Cats.find(cat => cat.id === a.parent_id);
+        const parentB = level1Cats.find(cat => cat.id === b.parent_id);
+        
+        const parentOrderA = parentA?.sort_order ?? 999;
+        const parentOrderB = parentB?.sort_order ?? 999;
+        
+        // Sort by parent category order first
+        if (parentOrderA !== parentOrderB) {
+          return parentOrderA - parentOrderB;
+        }
+        
+        // Then by subcategory sort_order within the same parent
         if (a.sort_order !== b.sort_order)
           return (a.sort_order ?? 0) - (b.sort_order ?? 0);
         return (a.id as number) - (b.id as number);
       }),
-    [subCatsRaw]
+    [subCatsRaw, level1Cats]
   );
 
   const visibleSubCats = subCats.slice(0, visibleSubCount);
@@ -201,28 +241,42 @@ export default function ProductsPage() {
       (entries) => {
         // Ignore observer updates while we're scrolling via navigation
         if (isAutoScrollingRef.current) return;
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        
+        // Find the section that's most visible in the viewport center
+        const intersecting = entries.filter((e) => e.isIntersecting);
+        if (!intersecting.length) return;
 
-        if (!visible) return;
+        // Get the section closest to the top of the visible area
+        const mostVisible = intersecting.reduce((closest, current) => {
+          const closestDistance = Math.abs(closest.boundingClientRect.top);
+          const currentDistance = Math.abs(current.boundingClientRect.top);
+          return currentDistance < closestDistance ? current : closest;
+        });
 
-        const subId = Number(visible.target.getAttribute("data-subcat"));
-        const parentId = Number(visible.target.getAttribute("data-parent"));
+        const subId = Number(mostVisible.target.getAttribute("data-subcat"));
+        const parentId = Number(mostVisible.target.getAttribute("data-parent"));
 
-        if (parentId) setActiveLevel1(parentId);
-        if (subId) setActiveLevel2(subId);
+        if (parentId && parentId !== activeLevel1) {
+          setActiveLevel1(parentId);
+        }
+        if (subId && subId !== activeLevel2) {
+          setActiveLevel2(subId);
+        }
       },
-      { rootMargin: "-45% 0px -45% 0px", threshold: 0.1 }
+      { 
+        rootMargin: "-20% 0px -70% 0px", // More responsive - top 30% of viewport
+        threshold: [0, 0.1, 0.3, 0.5, 0.7, 0.9, 1] // Multiple thresholds for better detection
+      }
     );
 
+    // Observe all rendered sections
     visibleSubCats.forEach((sub) => {
       const el = sectionRefs.current[sub.id];
       if (el) observer.observe(el);
     });
 
     return () => observer.disconnect();
-  }, [visibleSubCats, search, products]);
+  }, [visibleSubCats, activeLevel1, activeLevel2]); // Removed search/products to reduce re-init
 
   /* ---------------- LAZY LOAD ---------------- */
   useEffect(() => {
@@ -254,14 +308,15 @@ export default function ProductsPage() {
     const el = sectionRefs.current[subId];
     if (!el) return;
     isAutoScrollingRef.current = true;
+    // Instant jump instead of smooth scroll
     window.scrollTo({
       top: el.offsetTop - 160,
-      behavior: "smooth",
+      behavior: "auto",
     });
-    // Allow observer updates after scroll settles
+    // Shorter suppression for instant navigation
     window.setTimeout(() => {
       isAutoScrollingRef.current = false;
-    }, 500);
+    }, 100);
   };
 
   // When searching, scroll to the first subcategory that has results
@@ -358,77 +413,91 @@ export default function ProductsPage() {
     <div className="min-h-screen w-full bg-black text-white pb-28">
 
       {/* NAVIGATION */}
-      <div className="sticky top-0 z-50 bg-gradient-to-b from-slate-950 via-slate-900 to-black/95 backdrop-blur-xl px-3 sm:px-4 py-3 shadow-2xl border-b border-white/10">
-        {/* SEARCH */}
-        <div className="w-full flex justify-center mb-3">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search products..."
-            className="w-full max-w-xl h-11 sm:h-12 px-4 sm:px-5 rounded-xl bg-slate-900/70 text-white placeholder-white/60 border border-blue-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 outline-none"
-          />
-        </div>
+      <div className="sticky top-0 z-50 bg-[#0f0f0f]/95 backdrop-blur-xl border-b border-[#1f1f1f]">
+        <div className="max-w-5xl mx-auto w-full px-4 py-3 space-y-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/60" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Kerko produkte..."
+              className="w-full h-12 pl-12 pr-4 rounded-full bg-[#222] text-white placeholder-white/70 border border-[#2f2f2f] focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 outline-none shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+            />
+          </div>
 
-        {/* LEVEL 1 - Main Categories */}
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 md:flex-wrap">
-          {[{ id: 0, name: "All" }, ...level1Cats].map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setActiveLevel1(cat.id as number);
-                if (cat.id === 0) {
-                  setActiveLevel2(0);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                } else {
-                  const firstSub = subCats.find((c) => c.parent_id === (cat.id as number));
-                  if (firstSub) {
-                    setActiveLevel2(firstSub.id as number);
-                    scrollToSubcategory(firstSub.id as number);
-                  }
-                }
-              }}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition border ${
-                activeLevel1 === cat.id
-                  ? "bg-blue-600 border-blue-500 text-white shadow"
-                  : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-700"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
-        </div>
+          {/* LEVEL 1 - Main Categories */}
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1 md:flex-wrap border-b border-[#1f1f1f] pb-2">
+            {[{ id: 0, name: "Të gjitha artikujt" }, ...level1Cats].map((cat) => {
+              const isActive = activeLevel1 === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setActiveLevel1(cat.id as number);
+                    if (cat.id === 0) {
+                      setActiveLevel2(0);
+                      window.scrollTo({ top: 0, behavior: "auto" });
+                    } else {
+                      const firstSub = subCats.find((c) => c.parent_id === (cat.id as number));
+                      if (firstSub) {
+                        // Ensure the target subcategory is within visible range
+                        const subIndex = subCats.findIndex((c) => c.id === firstSub.id);
+                        if (subIndex >= visibleSubCount) {
+                          setVisibleSubCount(subIndex + 5); // Load a few extra
+                        }
+                        setActiveLevel2(firstSub.id as number);
+                        // Use setTimeout to ensure DOM is updated before scrolling
+                        setTimeout(() => scrollToSubcategory(firstSub.id as number), 0);
+                      }
+                    }
+                  }}
+                  className={`relative flex-shrink-0 pb-2 text-[12px] sm:text-sm font-semibold tracking-wide uppercase transition-colors ${
+                    isActive ? "text-cyan-400" : "text-white/75 hover:text-cyan-300"
+                  }`}
+                >
+                  {cat.name}
+                  {isActive && (
+                    <span className="absolute -bottom-[10px] left-0 right-0 h-[3px] rounded-full bg-cyan-400" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-        {/* LEVEL 2 - Subcategories */}
-        <div className="mt-3 flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 md:flex-wrap">
-          {currentLevel2Tabs.map((sub) => (
-            <button
-              key={sub.id}
-              onClick={() => {
-                setActiveLevel2(sub.id as number);
-                scrollToSubcategory(sub.id as number);
-                // keep level1 synced by parent
-                const parentId = sub.parent_id ?? null;
-                if (parentId) setActiveLevel1(parentId);
-              }}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
-                activeLevel2 === sub.id
-                  ? "bg-blue-600 border-blue-500 text-white"
-                  : "bg-slate-800/60 border-slate-700 text-slate-200 hover:bg-slate-700"
-              }`}
-            >
-              {sub.name}
-            </button>
-          ))}
-        </div>
-
-        {/* RESTAURANTS BUTTON */}
-        <div className="mt-3 flex justify-center">
-          <Link
-            href="/restaurants"
-            className="px-4 py-2 rounded-lg bg-blue-600 text-white text-xs sm:text-sm font-semibold shadow hover:bg-blue-700"
-          >
-            Restaurants
-          </Link>
+          {/* LEVEL 2 - Subcategories */}
+          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide -mx-1 px-1 md:flex-wrap pt-1">
+            {currentLevel2Tabs.length > 0 && (
+              <span className="text-[#2f2f2f] select-none">|</span>
+            )}
+            {currentLevel2Tabs.map((sub) => {
+              const isActive = activeLevel2 === sub.id;
+              return (
+                <button
+                  key={sub.id}
+                  onClick={() => {
+                    // Ensure the target subcategory is within visible range
+                    const subIndex = subCats.findIndex((c) => c.id === sub.id);
+                    if (subIndex >= visibleSubCount) {
+                      setVisibleSubCount(subIndex + 5); // Load a few extra
+                    }
+                    setActiveLevel2(sub.id as number);
+                    // Use setTimeout to ensure DOM is updated before scrolling
+                    setTimeout(() => scrollToSubcategory(sub.id as number), 0);
+                    const parentId = sub.parent_id ?? null;
+                    if (parentId) setActiveLevel1(parentId);
+                  }}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] sm:text-xs font-semibold border transition ${
+                    isActive
+                      ? "bg-cyan-500/90 border-cyan-400 text-black"
+                      : "bg-[#111] border-[#1f1f1f] text-white/80 hover:border-cyan-500/40"
+                  }`}
+                >
+                  {sub.name}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -439,32 +508,48 @@ export default function ProductsPage() {
         Admin: {isAdminGuard ? "YES" : "NO"}
       </div> */}
 
-      {/* ADMIN / USER */}
-      <div className="flex justify-center gap-3 mt-3">
-        {isAdminGuard ? (
-          <>
-            <Link
-              href="/admin/products"
-              className="px-3 py-1 bg-purple-700 text-white rounded-lg text-sm"
-            >
-              Manage Products
-            </Link>
+      {/* PRIMARY NAV SHORTCUTS + ADMIN/USER ACTIONS */}
+      <div className="flex flex-col items-center gap-2 mt-4">
+        <div className="flex items-center gap-2 text-sm font-semibold text-white/80">
+          {[{ label: "Restoranet", href: "/restaurants", icon: UtensilsCrossed }, { label: "Marketi", href: "/products", icon: Store }].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = tab.href === "/products";
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border transition shadow-sm ${
+                  isActive
+                    ? "bg-cyan-500 text-black border-cyan-400"
+                    : "bg-[#1a1a1a] border-[#2a2a2a] text-white/85 hover:border-cyan-500/50"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </Link>
+            );
+          })}
+        </div>
 
-            <Link
-              href="/admin/users"
-              className="px-3 py-1 bg-blue-700 text-white rounded-lg text-sm"
-            >
-              Manage Users
-            </Link>
-          </>
-        ) : (
-          <Link
-            href="/restaurants"
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-800 text-white text-sm font-semibold shadow-md hover:shadow-xl active:scale-95 transition"
-          >
-            Browse Restaurants
-          </Link>
-        )}
+        <div className="flex justify-center gap-3">
+          {isAdminGuard ? (
+            <>
+              <Link
+                href="/admin/products"
+                className="px-3 py-1 bg-purple-700 text-white rounded-lg text-sm"
+              >
+                Manage Products
+              </Link>
+
+              <Link
+                href="/admin/users"
+                className="px-3 py-1 bg-blue-700 text-white rounded-lg text-sm"
+              >
+                Manage Users
+              </Link>
+            </>
+          ) : null}
+        </div>
       </div>
 
       {/* ITEMS ON SALE - Horizontal carousel (hidden when searching) */}

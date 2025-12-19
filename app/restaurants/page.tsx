@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { getRestaurantStatus } from "@/lib/restaurantHours";
+import { Search, UtensilsCrossed, Store } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -153,9 +154,6 @@ export default function RestaurantsPage() {
           {/* Title Skeleton */}
           <div className="h-9 w-48 bg-slate-800/50 rounded animate-pulse mb-8 mx-auto" />
 
-          {/* Browse Groceries Button Skeleton */}
-          <div className="h-10 w-32 bg-slate-800/50 rounded-lg animate-pulse mb-6 mx-auto" />
-
           {/* Search Bar Skeleton */}
           <div className="h-11 bg-slate-800/50 rounded-lg animate-pulse mb-6" />
 
@@ -187,27 +185,47 @@ export default function RestaurantsPage() {
     );
 
   return (
-    <div className="min-h-screen bg-black text-white px-4 sm:px-6 py-10 pb-28">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-black text-white pb-28">
+      {/* Wolt-style header */}
+      <div className="sticky top-0 z-50 bg-[#0f0f0f]/95 backdrop-blur-xl border-b border-[#1f1f1f]">
+        <div className="max-w-5xl mx-auto w-full px-4 py-3 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/60" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Kërko restorante..."
+              className="w-full h-12 pl-12 pr-4 rounded-full bg-[#222] text-white placeholder-white/70 border border-[#2f2f2f] focus:border-cyan-400 focus:ring-2 focus:ring-cyan-500/20 outline-none shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+            />
+          </div>
+          {/* Tabs removed per request */}
+        </div>
+      </div>
 
-        {/* Title */}
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="text-3xl font-bold mb-4 text-center"
-        >
-          Restaurants
-        </motion.h1>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
 
-        {/* Browse Groceries Button */}
-        <div className="flex justify-center mb-6">
-          <Link href="/products">
-            <button className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold shadow transition flex items-center gap-2">
-              <span>🛒</span>
-              Browse Groceries
-            </button>
-          </Link>
+      
+
+        {/* Primary tabs (same placement as products page) */}
+        <div className="flex items-center justify-center gap-2 text-sm font-semibold text-white/80 mb-6">
+          {[{ label: "Restoranet", href: "/restaurants", icon: UtensilsCrossed }, { label: "Marketi", href: "/products", icon: Store }].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = tab.href === "/restaurants";
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border transition shadow-sm ${
+                  isActive
+                    ? "bg-cyan-500 text-black border-cyan-400"
+                    : "bg-[#1a1a1a] border-[#2a2a2a] text-white/85 hover:border-cyan-500/50"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </Link>
+            );
+          })}
         </div>
 
         {/* CATEGORY FILTERS */}
@@ -245,18 +263,6 @@ export default function RestaurantsPage() {
             </button>
           </div>
         )}
-
-        {/* SEARCH BAR BELOW CATEGORIES */}
-        <div className="mb-8">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Kerko restaurante…"
-            className="w-full h-11 sm:h-12 px-4 sm:px-5 rounded-xl bg-slate-900/70 border border-blue-600 
-                       text-white placeholder-white/60 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 outline-none transition"
-          />
-        </div>
 
         {/* RESTAURANTS LIST */}
         <DndContext

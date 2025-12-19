@@ -75,9 +75,9 @@ export function isStoreOpen(store: Store): boolean {
   const openTime = parseTime(store.opens_at);
   const closeTime = parseTime(store.closes_at);
 
-  // Special case: 24/7 store (00:00:00 - 23:59:59) should always be open
-  // We check if it's essentially 24 hours by seeing if it covers almost the entire day
-  if (openTime === 0 && closeTime >= 1439) { // 1439 = 23:59
+  // Special case: 24/7 store - check for 00:00-00:00 or nearly full day coverage
+  // 00:00-00:00 means always open, or if it covers 23:59+
+  if (openTime === 0 && (closeTime === 0 || closeTime >= 1439)) { // 0 = 00:00, 1439 = 23:59
     return true;
   }
 

@@ -326,7 +326,7 @@ export default function CartOverlay() {
             </span>
 
             <span className="text-base font-bold text-white">
-              €{totalPrice.toFixed(2)}
+              €{subtotal.toFixed(2)}
             </span>
           </button>
         </div>

@@ -132,6 +132,17 @@ export default function CartOverlay() {
 
       const orderId = order.id;
 
+      // Fetch user profile for name
+      const { data: userProfile } = await supabase
+        .from("user_profiles")
+        .select("first_name, last_name")
+        .eq("id", userId)
+        .single();
+
+      const userName = userProfile
+        ? `${userProfile.first_name || ""} ${userProfile.last_name || ""}`.trim()
+        : "Unknown User";
+
       const itemsPayload = cartItems.map(({ product, quantity }) => ({
         order_id: orderId,
         product_id: product.type === "grocery" ? product.id : null,
@@ -154,29 +165,60 @@ export default function CartOverlay() {
         return;
       }
 
-      await fetch(
-        "https://qnwnybyebiczlwxssblx.supabase.co/functions/v1/send-order-email",
-        {
+      // Send email notification
+      try {
+        const emailRes = await fetch(
+          "https://qnwnybyebiczlwxssblx.supabase.co/functions/v1/send-order-email",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              orderId,
+              total: totalPrice,
+              subtotal,
+              restaurantMixFee,
+              userId,
+              courierMessage,
+              items: cartItems.map(({ product, quantity }) => ({
+                name: product.name,
+                quantity,
+                price: product.price,
+                notes: product.notes || null,
+                image_url: product.image_url,
+                restaurant_name: product.restaurant_name || null,
+              })),
+            }),
+          }
+        );
+        if (!emailRes.ok) {
+          console.error("Email response error:", emailRes.status, await emailRes.text());
+        }
+      } catch (err) {
+        console.error("Email notification failed:", err);
+        // Don't block order completion if email fails
+      }
+
+      // Send Telegram notification
+      try {
+        const telegramRes = await fetch("/api/notifications/telegram", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            orderId,
-            total: totalPrice,
-            subtotal,
-            restaurantMixFee,
-            userId,
-            courierMessage,
+            userName,
             items: cartItems.map(({ product, quantity }) => ({
               name: product.name,
               quantity,
-              price: product.price,
-              notes: product.notes || null,
-              image_url: product.image_url,
               restaurant_name: product.restaurant_name || null,
             })),
           }),
+        });
+        if (!telegramRes.ok) {
+          console.error("Telegram response error:", telegramRes.status, await telegramRes.text());
         }
-      );
+      } catch (err) {
+        console.error("Telegram notification failed:", err);
+        // Don't block order completion if Telegram fails
+      }
 
       clearCart();
       setPlacingOrder(false);

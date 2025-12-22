@@ -552,6 +552,51 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* CIGARETTES CAROUSEL - Show first (hidden when searching) */}
+      {!search.trim() && (() => {
+        const cigaretteProducts = products.filter((p) => {
+          const cat = categories.find((c) => c.id === p.category_id);
+          return cat?.name?.toLowerCase().includes('cigare');
+        }).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        
+        return cigaretteProducts.length > 0 ? (
+          <div className="w-full max-w-[1100px] mx-auto px-3 sm:px-4 md:px-6 lg:px-8 mt-6 mb-2">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🚬</span>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-400 via-slate-300 to-gray-500 bg-clip-text text-transparent">
+                  Cigaret
+                </h2>
+              </div>
+              <div className="flex-1 h-px bg-gradient-to-r from-gray-500/50 to-transparent" />
+            </div>
+
+            {/* Carousel */}
+            <div className="relative">
+              <div className="overflow-x-auto scrollbar-hide">
+                <div className="flex gap-3 sm:gap-4 pb-2">
+                  {cigaretteProducts.map((p) => (
+                    <div 
+                      key={`cigarette-${p.id}`} 
+                      className="flex-shrink-0 w-[160px] sm:w-[170px] h-[240px] transform transition-transform hover:scale-105"
+                    >
+                      <ProductCard {...p} compact />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Gradient fade on edges */}
+              <div className="absolute top-0 left-0 bottom-0 w-8 bg-gradient-to-r from-black to-transparent pointer-events-none" />
+              <div className="absolute top-0 right-0 bottom-0 w-8 bg-gradient-to-l from-black to-transparent pointer-events-none" />
+            </div>
+
+            <div className="h-px bg-white/10 mt-4" />
+          </div>
+        ) : null;
+      })()}
+
       {/* ITEMS ON SALE - Horizontal carousel (hidden when searching) */}
       {!search.trim() && products.some((p) => p.is_on_sale && p.sale_price != null) && (
         <div className="w-full max-w-[1100px] mx-auto px-3 sm:px-4 md:px-6 lg:px-8 mt-6 mb-2">

@@ -7,6 +7,7 @@ import { useState, useRef } from "react";
 
 interface Props extends Product {
   onClick?: () => void;
+  compact?: boolean;
 }
 
 export default function ProductCard({
@@ -17,6 +18,7 @@ export default function ProductCard({
   is_on_sale,
   image_url,
   onClick,
+  compact = false,
 }: Props) {
   const { addItem, decreaseItem, items } = useCart();
   const quantity =
@@ -66,16 +68,16 @@ export default function ProductCard({
 
   return (
     <div
-      className="group relative rounded-2xl overflow-hidden 
+      className={`group relative rounded-2xl overflow-hidden 
                  bg-[#0e0f19] border border-white/10 shadow-md 
-                 transition-all duration-300"
+                 transition-all duration-300 flex flex-col h-full ${compact ? 'scale-95' : ''}`}
       onMouseEnter={showInstant}
       onMouseLeave={startHideTimer}
       onTouchStart={showInstant}
       onClick={onClick}
     >
       {/* IMAGE */}
-      <div className="relative w-full aspect-square rounded-t-2xl overflow-hidden">
+      <div className={`relative w-full ${compact ? 'h-[120px]' : 'aspect-square'} rounded-t-2xl overflow-hidden flex-shrink-0`}>
         <Image
           src={validImage}
           alt={name}
@@ -89,8 +91,8 @@ export default function ProductCard({
           {quantity === 0 && (
             <button
               onClick={inc}
-              className="w-9 h-9 rounded-xl bg-blue-600 text-white 
-                         flex items-center justify-center text-lg font-bold shadow-lg"
+              className={`${compact ? 'w-8 h-8 text-base' : 'w-9 h-9 text-lg'} rounded-xl bg-blue-600 text-white 
+                         flex items-center justify-center font-bold shadow-lg`}
             >
               +
             </button>
@@ -99,8 +101,8 @@ export default function ProductCard({
           {/* STATIC BADGE */}
           {quantity > 0 && !showControls && (
             <div
-              className="w-9 h-9 rounded-xl bg-blue-600 text-white 
-                         flex items-center justify-center text-sm font-semibold shadow-lg"
+              className={`${compact ? 'w-8 h-8 text-xs' : 'w-9 h-9 text-sm'} rounded-xl bg-blue-600 text-white 
+                         flex items-center justify-center font-semibold shadow-lg`}
             >
               {quantity}
             </div>
@@ -109,23 +111,23 @@ export default function ProductCard({
           {/* CONTROLS */}
           {quantity > 0 && showControls && (
             <div
-              className="flex items-center gap-1 
+              className={`flex items-center gap-1 
                          bg-black/60 backdrop-blur-xl 
                          border border-white/10 rounded-xl 
-                         px-3 py-2 shadow-xl"
+                         ${compact ? 'px-2 py-1.5' : 'px-3 py-2'} shadow-xl`}
             >
               {/* DEC */}
               <button
                 onClick={dec}
-                className="w-7 h-7 rounded-lg bg-blue-600 text-white text-lg 
-                           flex items-center justify-center"
+                className={`${compact ? 'w-6 h-6' : 'w-7 h-7'} rounded-lg bg-blue-600 text-white text-lg 
+                           flex items-center justify-center`}
               >
                 –
               </button>
 
               {/* QTY with Animation */}
               <span
-                className={`text-white text-sm font-semibold w-5 text-center ${
+                className={`text-white ${compact ? 'text-xs' : 'text-sm'} font-semibold w-5 text-center ${
                   animateQty ? "qty-pop" : ""
                 }`}
               >
@@ -135,8 +137,8 @@ export default function ProductCard({
               {/* INC */}
               <button
                 onClick={inc}
-                className="w-7 h-7 rounded-lg bg-blue-600 text-white text-lg 
-                           flex items-center justify-center"
+                className={`${compact ? 'w-6 h-6' : 'w-7 h-7'} rounded-lg bg-blue-600 text-white text-lg 
+                           flex items-center justify-center`}
               >
                 +
               </button>
@@ -146,30 +148,30 @@ export default function ProductCard({
       </div>
 
       {/* INFO */}
-      <div className="p-3 sm:p-4 bg-[#0b0c14]">
-        <p className="text-white font-semibold text-[13px] sm:text-sm leading-snug line-clamp-2">
+      <div className={`${compact ? 'p-2.5' : 'p-3 sm:p-4'} bg-[#0b0c14] flex flex-col flex-1`}>
+        <p className={`text-white font-semibold ${compact ? 'text-xs min-h-[32px]' : 'text-[13px] sm:text-sm min-h-[40px]'} leading-snug line-clamp-2`}>
           {name}
         </p>
 
-        <div className="mt-2 flex items-center justify-between">
+        <div className={`${compact ? 'mt-auto pt-2' : 'mt-2'} flex items-center justify-between`}>
           {is_on_sale && sale_price ? (
             <div className="flex items-baseline gap-2">
-                <span className="text-blue-300 font-semibold text-sm">
+                <span className={`text-blue-300 font-semibold ${compact ? 'text-xs' : 'text-sm'}`}>
                 €{sale_price.toFixed(2)}
               </span>
-                <span className="text-red-400 text-xs line-through opacity-80">
+                <span className={`text-red-400 ${compact ? 'text-[10px]' : 'text-xs'} line-through opacity-80`}>
                 €{price.toFixed(2)}
               </span>
             </div>
           ) : (
-            <span className="text-blue-400 font-bold text-sm">
+            <span className={`text-blue-400 font-bold ${compact ? 'text-xs' : 'text-sm'}`}>
               €{price.toFixed(2)}
             </span>
           )}
 
           <button
             onClick={inc}
-            className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold shadow hover:bg-blue-500 active:scale-95"
+            className={`${compact ? 'px-2.5 py-1 text-[10px]' : 'px-3 py-1.5 text-xs'} rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-500 active:scale-95`}
           >
             Shto
           </button>

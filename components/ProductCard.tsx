@@ -26,7 +26,7 @@ export default function ProductCard({
 
   const [showControls, setShowControls] = useState(false);
   const [animateQty, setAnimateQty] = useState(false);
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
+  const hideTimer = useRef<NodeJS.Timeout | null>(null); // podepotest
 
   const usedPrice = is_on_sale && sale_price ? sale_price : price;
   const validImage =

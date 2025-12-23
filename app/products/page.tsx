@@ -508,6 +508,15 @@ export default function ProductsPage() {
         Admin: {isAdminGuard ? "YES" : "NO"}
       </div> */}
 
+      {/* NEW PRODUCTS BANNER */}
+      <div className="w-full max-w-[1100px] mx-auto px-4 mt-4 mb-2">
+        <div className="bg-gradient-to-r from-blue-600/10 via-purple-600/10 to-blue-600/10 border border-blue-500/20 rounded-lg py-2 px-4 text-center">
+          <p className="text-white/80 text-xs sm:text-sm">
+            ✨ <span className="font-semibold">Jemi duke shtuar te reja gjdo dite. Cmimet jane akoma promocionale!</span>
+          </p>
+        </div>
+      </div>
+
       {/* PRIMARY NAV SHORTCUTS + ADMIN/USER ACTIONS */}
       <div className="flex flex-col items-center gap-2 mt-4">
         <div className="flex items-center gap-2 text-sm font-semibold text-white/80">
@@ -556,7 +565,14 @@ export default function ProductsPage() {
       {!search.trim() && (() => {
         const cigaretteProducts = products.filter((p) => {
           const cat = categories.find((c) => c.id === p.category_id);
-          return cat?.name?.toLowerCase().includes('cigare');
+          // Include products from categories or subcategories with "cigare" in the name
+          if (cat?.name?.toLowerCase().includes('cigare')) return true;
+          // Check if parent category includes "cigare"
+          if (cat?.parent_id) {
+            const parentCat = categories.find((c) => c.id === cat.parent_id);
+            return parentCat?.name?.toLowerCase().includes('cigare');
+          }
+          return false;
         }).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
         
         return cigaretteProducts.length > 0 ? (

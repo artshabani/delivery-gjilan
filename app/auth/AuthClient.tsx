@@ -26,7 +26,11 @@ export default function AuthClient() {
         return;
       }
 
+// Persist login details
 localStorage.setItem("dg_user_id", data.userId);
+if (token) {
+  try { localStorage.setItem("dg_login_token", token); } catch {}
+}
 
 // 🔥 notify all listeners immediately (VERY IMPORTANT)
 window.dispatchEvent(new Event("dg_user_id-set"));
@@ -41,7 +45,8 @@ window.dispatchEvent(new Event("dg_user_id-set"));
       if (profile?.role === "admin") {
         router.push("/admin/orders");
       } else {
-        router.push("/");
+        // Show home, but keep token in the URL for A2HS installs
+        router.push(`/?token=${token}`);
       }
     };
 

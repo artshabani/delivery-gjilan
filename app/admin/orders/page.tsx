@@ -14,6 +14,8 @@ interface OrderType {
   created_at: string;
   eta_minutes?: number | null;
   out_for_delivery_at?: string | null;
+  admin_message?: string | null;
+  admin_message_updated_at?: string | null;
   user?: { id: string; first_name: string; last_name: string };
   order_items?: Array<{
     id: number;
@@ -40,6 +42,8 @@ export default function AdminOrdersPage() {
   const [etaModal, setEtaModal] = useState<{ id: string; status: string } | null>(null);
   const [etaInput, setEtaInput] = useState<string>("15");
   const etaInputRef = useRef<HTMLInputElement | null>(null);
+  const [adminMessageModal, setAdminMessageModal] = useState<string | null>(null);
+  const [adminMessageText, setAdminMessageText] = useState<string>("");
   const [now, setNow] = useState(() => Date.now());
   const [showCompleted, setShowCompleted] = useState(false);
   const [orderProfits, setOrderProfits] = useState<Record<string, number>>({});
@@ -195,6 +199,27 @@ export default function AdminOrdersPage() {
       console.error("Failed to update status in DB:", await res.text());
       // reload fallback
       load();
+    }
+  }
+
+  /* Save admin message */
+  async function saveAdminMessage(orderId: string, message: string) {
+    const res = await fetch("/api/admin/orders/update-message", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, message }),
+    });
+
+    if (res.ok) {
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === orderId
+            ? { ...o, admin_message: message || null, admin_message_updated_at: new Date().toISOString() }
+            : o
+        )
+      );
+      setAdminMessageModal(null);
+      setAdminMessageText("");
     }
   }
 
@@ -439,40 +464,6 @@ export default function AdminOrdersPage() {
 
                   {o.status === "accepted" && (
                     <>
-                      {hasRestaurantItems(o) ? (
-                        // Restaurant order - show preparing button with ETA
-                        <button
-                          onClick={() => {
-                            setEtaModal({ id: o.id, status: "preparing" });
-                            setEtaInput("20");
-                          }}
-                          className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-base transition active:scale-95"
-                        >
-                          👨‍🍳 Start Preparing (Set Time)
-                        </button>
-                      ) : (
-                        // Grocery-only order - skip to delivery
-                        <button
-                          onClick={() => {
-                            setEtaModal({ id: o.id, status: "out_for_delivery" });
-                            setEtaInput("15");
-                          }}
-                          className="w-full py-3 rounded-lg bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-base transition active:scale-95"
-                        >
-                          🚗 Ready - Out for Delivery
-                        </button>
-                      )}
-                      <button
-                        onClick={() => updateStatus(o.id, "canceled")}
-                        className="w-full py-2 rounded-lg bg-red-600/70 hover:bg-red-600 text-white font-semibold text-sm transition active:scale-95"
-                      >
-                        ✕ Cancel
-                      </button>
-                    </>
-                  )}
-
-                  {o.status === "preparing" && (
-                    <>
                       <button
                         onClick={() => {
                           setEtaModal({ id: o.id, status: "out_for_delivery" });
@@ -480,7 +471,7 @@ export default function AdminOrdersPage() {
                         }}
                         className="w-full py-3 rounded-lg bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold text-base transition active:scale-95"
                       >
-                        🚗 Ready - Out for Delivery
+                        🚗 Out for Delivery
                       </button>
                       <button
                         onClick={() => updateStatus(o.id, "canceled")}
@@ -508,7 +499,36 @@ export default function AdminOrdersPage() {
                       >
                         ⏱ Update ETA: {o.eta_minutes || "?"} mins
                       </button>
+                      <button
+                        onClick={() => {
+                          setAdminMessageModal(o.id);
+                          setAdminMessageText(o.admin_message || "");
+                        }}
+                        className="w-full py-2 rounded-lg bg-indigo-600/70 hover:bg-indigo-600 text-white font-semibold text-sm transition active:scale-95"
+                      >
+                        💬 {o.admin_message ? "Edit" : "Add"} Message
+                      </button>
                     </>
+                  )}
+
+                  {/* Message button for ALL statuses */}
+                  {(o.status === "pending" || o.status === "accepted" || o.status === "canceled" || o.status === "delivered") && (
+                    <button
+                      onClick={() => {
+                        setAdminMessageModal(o.id);
+                        setAdminMessageText(o.admin_message || "");
+                      }}
+                      className="w-full py-2 rounded-lg bg-indigo-600/70 hover:bg-indigo-600 text-white font-semibold text-sm transition active:scale-95"
+                    >
+                      💬 {o.admin_message ? "Edit" : "Add"} Message
+                    </button>
+                  )}
+
+                  {/* Show message if exists */}
+                  {o.admin_message && (
+                    <div className="bg-indigo-500/10 border border-indigo-500/30 rounded-lg p-3 text-indigo-300 text-sm">
+                      💬 <span className="font-semibold">{o.admin_message}</span>
+                    </div>
                   )}
 
                   {/* MANUAL STATUS DROPDOWN - Always visible */}
@@ -528,7 +548,6 @@ export default function AdminOrdersPage() {
                     <option value="pending">Change status...</option>
                     <option value="pending">← Pending</option>
                     <option value="accepted">← Accepted</option>
-                    {hasRestaurantItems(o) && <option value="preparing">← Preparing</option>}
                     <option value="out_for_delivery">← Out for Delivery</option>
                     <option value="delivered">← Delivered</option>
                     <option value="canceled">✕ Canceled</option>
@@ -665,6 +684,43 @@ export default function AdminOrdersPage() {
                 className="flex-1 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold text-lg transition active:scale-95 shadow-lg shadow-blue-500/50"
               >
                 Save ETA
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADMIN MESSAGE MODAL */}
+      {adminMessageModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-indigo-500/30 rounded-2xl p-6 shadow-xl w-full max-w-md">
+            <h3 className="text-2xl font-bold text-white mb-4">💬 Order Message</h3>
+            
+            <textarea
+              value={adminMessageText}
+              onChange={(e) => setAdminMessageText(e.target.value)}
+              placeholder="E.g., 'Running a bit late, will be there in 30 mins' or 'Preparing your order...'"
+              className="w-full p-4 rounded-xl bg-slate-800 border border-slate-700 text-white placeholder-white/40 focus:border-indigo-500 focus:outline-none transition resize-none"
+              rows={4}
+            />
+
+            <p className="text-xs text-white/60 mt-2">This message will be shown to the customer on their order page.</p>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => {
+                  setAdminMessageModal(null);
+                  setAdminMessageText("");
+                }}
+                className="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white/70 font-bold transition active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => saveAdminMessage(adminMessageModal, adminMessageText)}
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold transition active:scale-95 shadow-lg shadow-indigo-500/50"
+              >
+                Save Message
               </button>
             </div>
           </div>

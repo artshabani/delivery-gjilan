@@ -7,24 +7,25 @@ export const runtime = "nodejs";
 export async function GET() {
   const { data, error } = await adminSupabase
     .from("site_status")
-    .select("is_closed, transportation_fee")
+    .select("is_closed, transportation_fee, closure_message")
     .eq("id", 1)
     .single();
 
   if (error) {
     console.error("[admin/site_status] read error:", error);
-    return NextResponse.json({ closed: false, transportation_fee: 0 });
+    return NextResponse.json({ closed: false, transportation_fee: 0, closure_message: "" });
   }
 
   return NextResponse.json({ 
     closed: Boolean(data?.is_closed),
-    transportation_fee: Number(data?.transportation_fee || 0)
+    transportation_fee: Number(data?.transportation_fee || 0),
+    closure_message: data?.closure_message || ""
   });
 }
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
-  const updateData: { is_closed?: boolean; transportation_fee?: number } = {};
+  const updateData: { is_closed?: boolean; transportation_fee?: number; closure_message?: string } = {};
   
   if (body?.closed !== undefined) {
     updateData.is_closed = Boolean(body.closed);
@@ -32,6 +33,10 @@ export async function POST(req: Request) {
   
   if (body?.transportation_fee !== undefined) {
     updateData.transportation_fee = Number(body.transportation_fee);
+  }
+
+  if (body?.closure_message !== undefined) {
+    updateData.closure_message = body.closure_message;
   }
 
   const { error } = await adminSupabase

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ShoppingBag, Utensils, Shield, Clock, UserPlus } from "lucide-react";
@@ -10,6 +11,10 @@ import { useAdminGuard } from "@/app/hooks/useAdminGuard"
 export default function Home() {
   const [name, setName] = useState<string | null>(null);
   const { loading, allowed } = useAdminGuard();
+  const search = useSearchParams();
+  const router = useRouter();
+
+  // No redirect; allow home to render even when token is present
 
   // Fetch logged-in user's name
   useEffect(() => {
@@ -47,6 +52,8 @@ export default function Home() {
       >
         {name ? `Cka ju nevojitet sot ${name}?` : "Cka ju nevojitet sot?"}
       </motion.h1>
+
+      {/* Token handling lives on /auth; no helper here */}
 
       {/* BUTTONS */}
       <div className="flex flex-col gap-6 w-full max-w-sm">

@@ -28,6 +28,7 @@ interface Order {
     created_at: string;
     eta_minutes?: number;
     out_for_delivery_at?: string;
+    admin_message?: string | null;
     order_items: OrderItem[];
 }
 
@@ -225,6 +226,17 @@ export default function OrderHistoryPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Admin Message */}
+                            {order.admin_message && (
+                                <div className="mx-5 mt-4 bg-gradient-to-r from-indigo-600/20 via-purple-600/20 to-indigo-600/20 border border-indigo-500/40 rounded-xl p-4 flex items-start gap-3">
+                                    <span className="text-2xl flex-shrink-0">💬</span>
+                                    <div>
+                                        <p className="text-indigo-200 font-semibold text-sm">{order.admin_message}</p>
+                                        <p className="text-indigo-300/60 text-xs mt-1">Message from restaurant</p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Order Items */}
                             <div className="p-5 space-y-3">

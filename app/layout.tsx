@@ -13,6 +13,24 @@ import Snowfall from "@/components/Snowfall";
 export const metadata = {
   title: "PrePhase0",
   description: "Delivery Gjilan Pre-Phase 0",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "DG Delivery",
+  },
+  icons: {
+    icon: [
+      { url: "/app-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/app-icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/app-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/app-icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/app-icon-32.png",
+  },
+  themeColor: "#3b82f6",
 };
 
 // Attach supabase client to window for debugging ONLY in browser

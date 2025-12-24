@@ -14,6 +14,7 @@ interface ActiveOrder {
   status: string;
   eta_minutes: number | null;
   out_for_delivery_at: string | null;
+  admin_message?: string | null;
   order_items?: {
     id: string | number;
     quantity: number;
@@ -32,8 +33,9 @@ export default function ActiveOrderBanner() {
   const [order, setOrder] = useState<ActiveOrder | null>(null);
   const [remaining, setRemaining] = useState(0);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [showItems, setShowItems] = useState(false);
+  const [showItems, setShowItems] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [shake, setShake] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -46,7 +48,7 @@ export default function ActiveOrderBanner() {
   });
 
   /* -----------------------------------------------------------
-     1. GET USER ID
+     1. GET USER ID AND CHECK IF ADMIN
   ----------------------------------------------------------- */
   useEffect(() => {
     let interval: number | undefined;
@@ -56,6 +58,18 @@ export default function ActiveOrderBanner() {
       if (!uid) return;
 
       setUserId(uid);
+      
+      // Check if user is admin
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("id", uid)
+        .single();
+      
+      if (data?.role === "admin") {
+        setIsAdmin(true);
+      }
+      
       setLoading(false);
 
       const res = await fetch(`/api/orders/active?user_id=${uid}`);
@@ -144,30 +158,37 @@ export default function ActiveOrderBanner() {
           const prev = payload.old as ActiveOrder;
           const next = payload.new as ActiveOrder;
 
-          let changed = false;
+          let toastShown = false;
 
-          if (prev.status !== next.status) {
+          // Only show ONE toast per update - prioritize status changes
+          if (prev.status !== next.status && !toastShown) {
             playStatusChange();
+            toast.dismiss();
             toast.success(`Order ${next.status.replace(/_/g, " ")}`, { duration: 6000 });
-            changed = true;
+            toastShown = true;
           }
-
-          if (prev.out_for_delivery_at !== next.out_for_delivery_at && next.out_for_delivery_at) {
+          else if (prev.admin_message !== next.admin_message && !toastShown) {
+            if (next.admin_message) {
+              toast.dismiss();
+              toast(`📢 ${next.admin_message}`, { icon: "💬", duration: 8000 });
+              toastShown = true;
+            }
+          }
+          else if (prev.out_for_delivery_at !== next.out_for_delivery_at && next.out_for_delivery_at && !toastShown) {
             playOutForDelivery();
+            toast.dismiss();
             toast("🚗 Courier is on the way!", {
               icon: "📦",
               duration: 6000,
               style: { background: "#0ea5e9", color: "white" },
             });
-            changed = true;
+            toastShown = true;
           }
-
-          if (prev.eta_minutes !== next.eta_minutes && next.eta_minutes != null) {
+          else if (prev.eta_minutes !== next.eta_minutes && next.eta_minutes != null && !toastShown) {
+            toast.dismiss();
             toast(`ETA updated: ${next.eta_minutes} min`, { icon: "⏱️", duration: 6000 });
-            changed = true;
+            toastShown = true;
           }
-
-          if (!changed) return;
 
           const res = await fetch(`/api/orders/active?user_id=${userId}`);
           if (res.ok) {
@@ -227,6 +248,11 @@ export default function ActiveOrderBanner() {
     return null;
   }
 
+  // Don't show fullscreen modal for admins
+  if (isAdmin) {
+    return null;
+  }
+
   /* ETA TEXT */
   const etaText = (() => {
     if ((order.status === "preparing" || order.status === "out_for_delivery") && order.eta_minutes) {
@@ -239,13 +265,48 @@ export default function ActiveOrderBanner() {
   })();
 
   const statusStyles = {
-    pending: { bg: "from-yellow-500 to-amber-500", text: "Prisni korierin", color: "text-yellow-400" },
-    accepted: { bg: "from-sky-500 to-blue-500", text: "Porosia u pranua", color: "text-blue-400" },
-    preparing: { bg: "from-purple-500 to-blue-500", text: "Duke përpunuar...", color: "text-purple-400" },
-    confirmed: { bg: "from-sky-500 to-blue-500", text: "Preparing order", color: "text-blue-400" },
-    out_for_delivery: { bg: "from-green-500 to-emerald-600", text: "Korieri rruges...", color: "text-green-400" },
-    delivered: { bg: "from-gray-600 to-slate-700", text: "Delivered", color: "text-gray-400" },
-    canceled: { bg: "from-red-500 to-rose-600", text: "Canceled", color: "text-red-400" },
+    pending: { 
+      bg: "from-amber-500 to-yellow-500", 
+      bgDim: "bg-amber-500/20 border-amber-500/30",
+      accent: "bg-amber-500/20 border-amber-500/30",
+      text: "Prisni korierin", 
+      color: "text-amber-400" 
+    },
+    accepted: { 
+      bg: "from-blue-500 to-cyan-500", 
+      bgDim: "bg-blue-500/20 border-blue-500/30",
+      accent: "bg-blue-500/20 border-blue-500/30",
+      text: "Porosia u pranua", 
+      color: "text-blue-400" 
+    },
+    preparing: { 
+      bg: "from-purple-500 to-pink-500", 
+      bgDim: "bg-purple-500/20 border-purple-500/30",
+      accent: "bg-purple-500/20 border-purple-500/30",
+      text: "Duke përpunuar...", 
+      color: "text-purple-400" 
+    },
+    out_for_delivery: { 
+      bg: "from-green-500 to-emerald-500", 
+      bgDim: "bg-green-500/20 border-green-500/30",
+      accent: "bg-green-500/20 border-green-500/30",
+      text: "Korieri rruges...", 
+      color: "text-green-400" 
+    },
+    delivered: { 
+      bg: "from-slate-400 to-slate-500", 
+      bgDim: "bg-slate-500/20 border-slate-500/30",
+      accent: "bg-slate-500/20 border-slate-500/30",
+      text: "Delivered", 
+      color: "text-slate-400" 
+    },
+    canceled: { 
+      bg: "from-red-500 to-rose-500", 
+      bgDim: "bg-red-500/20 border-red-500/30",
+      accent: "bg-red-500/20 border-red-500/30",
+      text: "Canceled", 
+      color: "text-red-400" 
+    },
   };
 
   const palette = statusStyles[order.status as keyof typeof statusStyles] || statusStyles.pending;
@@ -257,143 +318,136 @@ export default function ActiveOrderBanner() {
     <>
       <style>
         {`
-          @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-            100% { transform: translateX(0); }
+          @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.5); }
           }
-          .shake { animation: shake 0.6s ease-in-out; }
+          .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
         `}
       </style>
 
-      {/* BANNER */}
-      <div className="fixed bottom-4 left-0 w-full flex justify-center z-40 px-4 pointer-events-none">
-        <button
-          onClick={() => setDetailsOpen(true)}
-          className={`w-full max-w-xl bg-gradient-to-r ${palette.bg} border border-white/20 rounded-2xl shadow-2xl p-4 flex items-center justify-between gap-3 pointer-events-auto transition ${shake ? "shake" : ""
-            }`}
-        >
-          <div>
-            <p className="text-white font-semibold">Percjell porosine</p>
-            <p className="text-white/90 text-sm">
-              {order.status === "preparing" && order.eta_minutes
-                ? `Prep ${etaText}`
-                : order.status === "out_for_delivery" && order.eta_minutes
-                  ? `ETA ${etaText}`
-                  : palette.text}
-            </p>
-          </div>
-
-          <div className="text-right">
-            {order.status === "preparing" && order.eta_minutes ? (
-              <p className="text-white font-semibold text-lg">{etaText}</p>
-            ) : order.status === "out_for_delivery" ? (
-              <p className="text-white font-semibold text-lg">{etaText}</p>
-            ) : (
-              <span className="px-3 py-1 rounded-full text-sm font-semibold text-white bg-white/20">
-                {order.status.replace(/_/g, " ")}
-              </span>
-            )}
-            <p className="text-blue-100 text-xs mt-1">Prek per detaje</p>
-          </div>
-        </button>
-      </div>
-
-      {/* MODAL */}
-      {detailsOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="w-full max-w-lg bg-slate-900 border border-blue-500/30 rounded-2xl p-5 space-y-4 shadow-xl">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-white">Order details</h3>
-              <button
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500 transition text-white"
-                onClick={() => setDetailsOpen(false)}
-              >
-                ✕
-              </button>
+      {/* FULLSCREEN MODAL - Always visible when there's an active order */}
+      <div className="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4 overflow-y-auto">
+        <div className="w-full max-w-2xl my-auto">
+          {/* Main Card */}
+          <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden pulse-glow">
+            
+            {/* Header */}
+            <div className="border-b border-white/10 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold text-white">
+                    📦 Your Order
+                  </h2>
+                  <p className="text-white/50 text-sm mt-1">Track your order status</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-white/40 uppercase tracking-wider">ID</p>
+                  <p className="text-white/70 font-mono text-sm">#{order.id.slice(0, 8)}</p>
+                </div>
+              </div>
             </div>
 
-            {/* STATUS */}
-            <div className={`${palette.bg} rounded-2xl p-4 flex items-center justify-between bg-gradient-to-r`}>
-              <div>
-                <p className="text-white/80 text-xs uppercase tracking-wide">Status</p>
-                <p className="font-bold capitalize text-white text-lg mt-1">
-                  {order.status.replace(/_/g, " ")}
-                </p>
-                <p className="text-white/70 text-xs mt-1">{palette.text}</p>
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              
+              {/* STATUS */}
+              <div className={`bg-gradient-to-r ${palette.bg} rounded-xl p-6 flex items-center justify-between shadow-lg`}>
+                <div>
+                  <p className="text-white/80 text-xs uppercase tracking-wider font-semibold">Status</p>
+                  <p className="font-bold capitalize text-white text-2xl mt-2">
+                    {order.status.replace(/_/g, " ")}
+                  </p>
+                  <p className="text-white/70 text-sm mt-2">{palette.text}</p>
+                </div>
+
+                {(order.status === "out_for_delivery" || order.status === "preparing") && (
+                  <div className={`text-center rounded-xl p-4 border ${palette.accent}`}>
+                    <p className={`${palette.color} text-xs uppercase tracking-wider font-semibold`}>
+                      {order.status === "preparing" ? "Prep" : "ETA"}
+                    </p>
+                    <p className={`text-4xl font-bold ${palette.color} mt-2`}>{etaText}</p>
+                  </div>
+                )}
               </div>
 
-              {(order.status === "out_for_delivery" || order.status === "preparing") && (
-                <div className="text-center">
-                  <p className="text-white/70 text-xs uppercase">
-                    {order.status === "preparing" ? "Prep Time" : "ETA"}
-                  </p>
-                  <p className="text-2xl font-bold text-white mt-1">{etaText}</p>
+              {/* ADMIN MESSAGE - Highlighted with amber */}
+              {order.admin_message && (
+                <div className="bg-amber-500/15 border-2 border-amber-500/50 rounded-xl p-5 shadow-lg">
+                  <div className="flex items-start gap-4">
+                    <div className="text-3xl flex-shrink-0">🔔</div>
+                    <div className="flex-1">
+                      <p className="text-amber-300 text-xs uppercase tracking-wider font-bold mb-1">Important Message</p>
+                      <p className="text-white text-base font-semibold leading-relaxed">{order.admin_message}</p>
+                    </div>
+                  </div>
                 </div>
               )}
-            </div>
 
-            {/* ITEMS */}
-            <div className="bg-slate-800/40 rounded-2xl">
-              <button
-                className="w-full flex items-center justify-between px-4 py-3 text-white text-sm font-semibold hover:bg-slate-800/60 transition rounded-t-2xl"
-                onClick={() => setShowItems((s) => !s)}
-              >
-                <span>
-                  Items ({order.order_items?.length || 0})
-                </span>
-                <span className="text-white/60 text-xs">{showItems ? "▼" : "▶"}</span>
-              </button>
+              {/* ITEMS */}
+              <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+                <button
+                  className="w-full flex items-center justify-between px-6 py-4 text-white font-semibold hover:bg-white/10 transition"
+                  onClick={() => setShowItems((s) => !s)}
+                >
+                  <span className="text-lg">
+                    📦 Items ({order.order_items?.length || 0})
+                  </span>
+                  <span className="text-white/60 text-xl">{showItems ? "▼" : "▶"}</span>
+                </button>
 
-              {showItems && (
-                <div className="border-t border-white/10 p-3 space-y-2 max-h-64 overflow-y-auto rounded-b-2xl">
-                  {order.order_items?.map((item) => {
-                    const name =
-                      item.product?.name ||
-                      item.restaurant_item?.name ||
-                      "Item";
-                    const img =
-                      item.product?.image_url || item.restaurant_item?.image_url;
+                {showItems && (
+                  <div className="border-t border-white/10 p-4 space-y-3 max-h-80 overflow-y-auto">
+                    {order.order_items?.map((item) => {
+                      const name =
+                        item.product?.name ||
+                        item.restaurant_item?.name ||
+                        "Item";
+                      const img =
+                        item.product?.image_url || item.restaurant_item?.image_url;
 
-                    return (
-                      <div
-                        key={item.id}
-                        className="flex items-center gap-3 bg-slate-900/40 rounded-lg p-3 hover:bg-slate-900/60 transition"
-                      >
-                        <div className="w-12 h-12 rounded-lg bg-slate-700 overflow-hidden flex-shrink-0">
-                          {img ? (
-                            <img src={img} alt={name} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs text-slate-400">No image</div>
-                          )}
-                        </div>
+                      return (
+                        <div
+                          key={item.id}
+                          className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition"
+                        >
+                          <div className="w-16 h-16 rounded-lg bg-white/10 overflow-hidden flex-shrink-0 border border-white/10">
+                            {img ? (
+                              <img src={img} alt={name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white/20">📦</div>
+                            )}
+                          </div>
 
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-semibold truncate">{name}</p>
-                          <p className="text-slate-400 text-xs mt-0.5">
-                            {item.quantity} × €{item.price.toFixed(2)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-base font-semibold truncate">{name}</p>
+                            <p className="text-white/50 text-sm mt-1">
+                              {item.quantity} × €{item.price.toFixed(2)}
+                            </p>
+                          </div>
+
+                          <p className="text-blue-400 font-bold text-lg flex-shrink-0">
+                            €{(item.quantity * item.price).toFixed(2)}
                           </p>
                         </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-                        <p className="text-blue-400 font-semibold text-sm flex-shrink-0">
-                          €{(item.quantity * item.price).toFixed(2)}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+              {/* TOTAL */}
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-6 flex justify-between items-center">
+                <span className="text-white text-lg font-semibold">Total</span>
+                <span className="text-3xl font-bold text-blue-400">
+                  €{order.total.toFixed(2)}
+                </span>
+              </div>
 
-            <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl p-4 flex justify-between items-center">
-              <span className="text-white/80 font-semibold">Total</span>
-              <span className="text-2xl font-bold text-blue-400">€{order.total.toFixed(2)}</span>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </>
   );
 }

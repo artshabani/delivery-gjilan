@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import confetti from "canvas-confetti";
 import toast from "react-hot-toast";
@@ -198,28 +198,7 @@ export default function CartOverlay() {
         // Don't block order completion if email fails
       }
 
-      // Send Telegram notification
-      try {
-        const telegramRes = await fetch("/api/notifications/telegram", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userName,
-            items: cartItems.map(({ product, quantity }) => ({
-              name: product.name,
-              quantity,
-              restaurant_name: product.restaurant_name || null,
-            })),
-          }),
-        });
-        if (!telegramRes.ok) {
-          console.error("Telegram response error:", telegramRes.status, await telegramRes.text());
-        }
-      } catch (err) {
-        console.error("Telegram notification failed:", err);
-        // Don't block order completion if Telegram fails
-      }
-
+      // Mark order as successful immediately after email (don't wait for Telegram)
       clearCart();
       setPlacingOrder(false);
       setOrderSuccess(true);
@@ -232,6 +211,24 @@ export default function CartOverlay() {
       });
 
       setTimeout(() => setOrderSuccess(false), 2000);
+
+      // Send Telegram notification in background (fire-and-forget)
+      try {
+        fetch("/api/notifications/telegram", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userName,
+            items: cartItems.map(({ product, quantity }) => ({
+              name: product.name,
+              quantity,
+              restaurant_name: product.restaurant_name || null,
+            })),
+          }),
+        }).catch((err) => console.error("Telegram notification failed:", err));
+      } catch (err) {
+        console.error("Telegram notification error:", err);
+      }
     } catch {
       setPlacingOrder(false);
       toast.error("Unexpected error.");
@@ -353,12 +350,22 @@ export default function CartOverlay() {
   -------------------------------------------------------- */
   return (
     <>
+      <style>
+        {`
+          @keyframes cart-breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+          }
+          .cart-breathing { animation: cart-breathe 2.5s ease-in-out infinite; }
+        `}
+      </style>
+
       {/* CART BADGE */}
       {hasCart && !isCartOpen && (
         <div className="fixed bottom-5 left-0 w-full flex justify-center z-40 pointer-events-none">
           <button
             onClick={() => setIsCartOpen(true)}
-            className="dg-cart-btn pointer-events-auto w-[85%] py-4 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/40 flex items-center justify-between px-6 active:scale-95 hover:shadow-blue-600/60 transition-all"
+            className="dg-cart-btn pointer-events-auto w-[85%] py-4 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/40 flex items-center justify-between px-6 active:scale-95 hover:shadow-blue-600/60 transition-all cart-breathing"
           >
             <span className="flex items-center gap-3 text-base font-medium">
               <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">

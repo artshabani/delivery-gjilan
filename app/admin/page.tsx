@@ -19,6 +19,8 @@ export default function AdminHomePage() {
   const [busy, setBusy] = useState(false);
   const [transportationFee, setTransportationFee] = useState<string>("0");
   const [savingFee, setSavingFee] = useState(false);
+  const [closureMessage, setClosureMessage] = useState<string>("");
+  const [savingMessage, setSavingMessage] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalOrders: 0,
@@ -36,6 +38,7 @@ export default function AdminHomePage() {
       const data = await res.json();
       setClosed(Boolean(data.closed));
       setTransportationFee(String(data.transportation_fee || 0));
+      setClosureMessage(data.closure_message || "");
     };
     fetchStatus();
   }, []);
@@ -99,7 +102,37 @@ export default function AdminHomePage() {
     }
   };
 
-  if (!guard) return null;
+  const saveClosureMessage = async () => {
+    setSavingMessage(true);
+    const res = await fetch("/api/admin/site/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ closure_message: closureMessage }),
+    });
+    setSavingMessage(false);
+    if (res.ok) {
+      alert("Closure message updated!");
+    }
+  };
+
+  if (guard.loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!guard.allowed) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-2xl font-bold mb-4">Access Denied</div>
+          <div className="text-white/60">You don't have permission to access this page.</div>
+        </div>
+      </div>
+    );
+  }
 
   const quickActions = [
     {
@@ -196,6 +229,30 @@ export default function AdminHomePage() {
               >
                 {busy ? "Saving..." : closed ? "Open Store" : "Close Store"}
               </button>
+            </div>
+            
+            {/* Custom Closure Message */}
+            <div className="pt-4 border-t border-white/10">
+              <label className="block text-sm font-semibold text-white/90 mb-2">
+                Custom Closure Message
+              </label>
+              <textarea
+                value={closureMessage}
+                onChange={(e) => setClosureMessage(e.target.value)}
+                placeholder="Enter message to display when store is closed (optional)"
+                className="w-full px-4 py-3 bg-slate-700/50 border border-white/10 text-white rounded-lg focus:outline-none focus:border-purple-500/50 transition resize-none"
+                rows={3}
+              />
+              <button
+                onClick={saveClosureMessage}
+                disabled={savingMessage}
+                className="mt-2 w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-purple-500/50 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 text-sm"
+              >
+                {savingMessage ? "Saving..." : "Save Message"}
+              </button>
+              <p className="text-xs text-white/50 mt-2">
+                If empty, default closure message will be shown
+              </p>
             </div>
           </div>
 

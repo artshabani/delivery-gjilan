@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 export default function SiteClosedOverlay() {
   const [closed, setClosed] = useState(false);
+  const [closureMessage, setClosureMessage] = useState("");
   const pathname = usePathname();
 
   useEffect(() => {
@@ -15,7 +16,10 @@ export default function SiteClosedOverlay() {
         const res = await fetch("/api/site/status");
         if (!res.ok) return;
         const data = await res.json();
-        if (active) setClosed(Boolean(data.closed));
+        if (active) {
+          setClosed(Boolean(data.closed));
+          setClosureMessage(data.closure_message || "");
+        }
       } catch {
         // fail open
       }
@@ -55,18 +59,13 @@ export default function SiteClosedOverlay() {
             </div>
           </div>
 
-          {/* Title */}
+          {/* Custom Message */}
           <div className="space-y-2">
-            <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
-              S&apos;jemi tu punu
+            <h2 className="text-2xl sm:text-3xl font-bold text-white/90 leading-relaxed">
+              {closureMessage || "Na vjen keq, momentalisht dyqani nuk eshte aktiv. Kthehuni më vonë!"}
             </h2>
             <div className="w-20 h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent mx-auto"></div>
           </div>
-
-          {/* Message */}
-          <p className="text-white/80 text-base sm:text-lg leading-relaxed">
-            Na vjen keq, momentalisht dyqani nuk eshte aktiv. Kthehuni më vonë!
-          </p>
 
           {/* Contact section */}
           <div className="pt-4 space-y-3">

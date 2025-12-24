@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const userId = searchParams.get("user_id");
@@ -18,6 +20,7 @@ export async function GET(req: Request) {
       status,
       eta_minutes,
       out_for_delivery_at,
+      admin_message,
       created_at,
       order_items (
         id,

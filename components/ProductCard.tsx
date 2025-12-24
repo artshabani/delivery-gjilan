@@ -69,12 +69,15 @@ export default function ProductCard({
   return (
     <div
       className={`group relative rounded-2xl overflow-hidden 
-                 bg-[#0e0f19] border border-white/10 shadow-md 
-                 transition-all duration-300 flex flex-col h-full ${compact ? 'scale-95' : ''}`}
+                 bg-[#0e0f19] border border-white/10 shadow-md hover:border-blue-500/30
+                 transition-all duration-300 flex flex-col h-full cursor-pointer ${compact ? 'scale-95' : ''}`}
       onMouseEnter={showInstant}
       onMouseLeave={startHideTimer}
       onTouchStart={showInstant}
-      onClick={onClick}
+      onClick={() => {
+        if (onClick) onClick();
+        inc(); // Add item when card is clicked
+      }}
     >
       {/* IMAGE */}
       <div className={`relative w-full ${compact ? 'h-[120px]' : 'aspect-square'} rounded-t-2xl overflow-hidden flex-shrink-0`}>
@@ -90,9 +93,12 @@ export default function ProductCard({
           {/* ADD BUTTON */}
           {quantity === 0 && (
             <button
-              onClick={inc}
-              className={`${compact ? 'w-8 h-8 text-base' : 'w-9 h-9 text-lg'} rounded-xl bg-blue-600 text-white 
-                         flex items-center justify-center font-bold shadow-lg`}
+              onClick={(e) => {
+                e.stopPropagation();
+                inc();
+              }}
+              className={`${compact ? 'w-11 h-11 text-xl' : 'w-12 h-12 text-2xl'} rounded-xl bg-blue-600 hover:bg-blue-500 text-white 
+                         flex items-center justify-center font-bold shadow-lg transition-all active:scale-95`}
             >
               +
             </button>
@@ -101,7 +107,7 @@ export default function ProductCard({
           {/* STATIC BADGE */}
           {quantity > 0 && !showControls && (
             <div
-              className={`${compact ? 'w-8 h-8 text-xs' : 'w-9 h-9 text-sm'} rounded-xl bg-blue-600 text-white 
+              className={`${compact ? 'w-11 h-11 text-sm' : 'w-12 h-12 text-base'} rounded-xl bg-blue-600 text-white 
                          flex items-center justify-center font-semibold shadow-lg`}
             >
               {quantity}
@@ -111,23 +117,26 @@ export default function ProductCard({
           {/* CONTROLS */}
           {quantity > 0 && showControls && (
             <div
-              className={`flex items-center gap-1 
+              className={`flex items-center gap-2 
                          bg-black/60 backdrop-blur-xl 
                          border border-white/10 rounded-xl 
-                         ${compact ? 'px-2 py-1.5' : 'px-3 py-2'} shadow-xl`}
+                         ${compact ? 'px-3 py-2.5' : 'px-4 py-3'} shadow-xl`}
             >
               {/* DEC */}
               <button
-                onClick={dec}
-                className={`${compact ? 'w-6 h-6' : 'w-7 h-7'} rounded-lg bg-blue-600 text-white text-lg 
-                           flex items-center justify-center`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dec();
+                }}
+                className={`${compact ? 'w-8 h-8' : 'w-9 h-9'} rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xl 
+                           flex items-center justify-center transition-all active:scale-95`}
               >
                 –
               </button>
 
               {/* QTY with Animation */}
               <span
-                className={`text-white ${compact ? 'text-xs' : 'text-sm'} font-semibold w-5 text-center ${
+                className={`text-white ${compact ? 'text-sm' : 'text-base'} font-semibold w-6 text-center ${
                   animateQty ? "qty-pop" : ""
                 }`}
               >
@@ -136,9 +145,12 @@ export default function ProductCard({
 
               {/* INC */}
               <button
-                onClick={inc}
-                className={`${compact ? 'w-6 h-6' : 'w-7 h-7'} rounded-lg bg-blue-600 text-white text-lg 
-                           flex items-center justify-center`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  inc();
+                }}
+                className={`${compact ? 'w-8 h-8' : 'w-9 h-9'} rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xl 
+                           flex items-center justify-center transition-all active:scale-95`}
               >
                 +
               </button>
@@ -170,8 +182,11 @@ export default function ProductCard({
           )}
 
           <button
-            onClick={inc}
-            className={`${compact ? 'px-2.5 py-1 text-[10px]' : 'px-3 py-1.5 text-xs'} rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-500 active:scale-95`}
+            onClick={(e) => {
+              e.stopPropagation();
+              inc();
+            }}
+            className={`${compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm'} rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow transition-all active:scale-95`}
           >
             Shto
           </button>

@@ -11,7 +11,7 @@ import Snowfall from "@/components/Snowfall";
 
 
 export const metadata = {
-  title: "PrePhase0",
+  title: "Delivery",
   description: "Delivery Gjilan Pre-Phase 0",
   manifest: "/manifest.json",
   appleWebApp: {

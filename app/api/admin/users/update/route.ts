@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { adminSupabase } from "@/lib/supabase-admin";
 
 export async function POST(req: Request) {
-  const { user_id, email, first_name, last_name, phone, address } = await req.json();
+  const { user_id, email, first_name, last_name, phone, address, transportation_fee } = await req.json();
 
   if (!user_id) {
     return NextResponse.json({ error: "Missing user_id" }, { status: 400 });
@@ -29,6 +29,7 @@ export async function POST(req: Request) {
       last_name,
       phone,
       address,
+      transportation_fee: transportation_fee != null ? Number(transportation_fee) : null,
     })
     .eq("id", user_id);
 

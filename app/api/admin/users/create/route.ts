@@ -4,7 +4,7 @@ import { nanoid } from "nanoid";
 
 export async function POST(req: Request) {
   try {
-    const { email, first_name, last_name, phone, address } = await req.json();
+    const { email, first_name, last_name, phone, address, transportation_fee } = await req.json();
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -31,6 +31,7 @@ export async function POST(req: Request) {
         last_name,
         phone,
         address,
+        transportation_fee: transportation_fee != null ? Number(transportation_fee) : null,
       });
 
     if (profileError) {

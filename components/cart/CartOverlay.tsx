@@ -68,8 +68,9 @@ export default function CartOverlay() {
   /* -------------------------------------------------------
      REQUIRE MINIMUM TOTAL (uses FINAL totalPrice)
   -------------------------------------------------------- */
-  const requireMinimumTotal = () => {
-    if (totalPrice < MIN_ORDER_TOTAL) {
+  const requireMinimumTotal = (computedTotal?: number) => {
+    const value = computedTotal ?? totalPrice;
+    if (value < MIN_ORDER_TOTAL) {
       toast.error(
         `Shuma minimale e porosise eshte €${MIN_ORDER_TOTAL.toFixed(2)}.`
       );
@@ -85,8 +86,7 @@ export default function CartOverlay() {
     try {
       toast.dismiss();
       const userId = requireUserId();
-      const hasMinimum = requireMinimumTotal();
-      if (!userId || !hasMinimum) return;
+      if (!userId) return;
 
       setPlacingOrder(true);
 
@@ -107,12 +107,30 @@ export default function CartOverlay() {
         // Safest is to probably alert user but let's just log for now to not block if API fails.
       }
 
+      // Ensure we use the latest per-user transportation fee
+      let effectiveTransportationFee = transportationFee;
+      try {
+        const feeRes = await fetch(`/api/pricing/transportation-fee?userId=${userId}`);
+        if (feeRes.ok) {
+          const feeData = await feeRes.json();
+          if (feeData && feeData.transportation_fee != null) {
+            effectiveTransportationFee = Number(feeData.transportation_fee || 0);
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to refresh transportation fee before checkout:", e);
+      }
+
+      const finalTotal = subtotal + restaurantMixFee + effectiveTransportationFee;
+      const hasMinimum = requireMinimumTotal(finalTotal);
+      if (!hasMinimum) { setPlacingOrder(false); return; }
+
       const orderPayload: {
         total: number;
         created_at: string;
         user_id: string;
       } = {
-        total: totalPrice,
+        total: finalTotal,
         created_at: new Date().toISOString(),
         user_id: userId,
       };
@@ -174,7 +192,7 @@ export default function CartOverlay() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               orderId,
-              total: totalPrice,
+              total: finalTotal,
               subtotal,
               restaurantMixFee,
               userId,

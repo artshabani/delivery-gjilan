@@ -37,6 +37,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchTransportationFee = async () => {
       try {
+        const userId = localStorage.getItem("dg_user_id");
+
+        if (userId) {
+          const userRes = await fetch(`/api/pricing/transportation-fee?userId=${encodeURIComponent(userId)}`);
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            if (userData && userData.transportation_fee != null) {
+              setTransportationFee(Number(userData.transportation_fee || 0));
+              return;
+            }
+          }
+        }
+
         const res = await fetch("/api/site/status");
         if (res.ok) {
           const data = await res.json();
@@ -46,7 +59,30 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         console.error("Failed to fetch transportation fee:", error);
       }
     };
+
+    // Initial fetch
     fetchTransportationFee();
+
+    // Refetch when tab becomes active (e.g., after admin changes)
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        fetchTransportationFee();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    // Refetch immediately when login sets the user id
+    const onUserIdSet = () => fetchTransportationFee();
+    window.addEventListener("dg_user_id-set", onUserIdSet as EventListener);
+
+    // Periodic refresh to avoid stale values
+    const interval = setInterval(fetchTransportationFee, 60_000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("dg_user_id-set", onUserIdSet as EventListener);
+      clearInterval(interval);
+    };
   }, []);
 
   /* -----------------------------------------------

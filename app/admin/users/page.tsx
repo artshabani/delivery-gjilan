@@ -11,6 +11,7 @@ interface UserRow {
   last_name: string | null;
   phone: string | null;
   address: string | null;
+  transportation_fee?: number | null;
 }
 
 export default function AdminUsers() {
@@ -31,6 +32,7 @@ export default function AdminUsers() {
   const [editLastName, setEditLastName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [editTransportationFee, setEditTransportationFee] = useState<string>("");
 
   const [search, setSearch] = useState("");
   const [confirmSave, setConfirmSave] = useState(false);
@@ -53,6 +55,7 @@ export default function AdminUsers() {
     last_name: string;
     phone: string;
     address: string;
+    transportation_fee?: number | null;
   }) => {
     const data = userData || {
       email,
@@ -60,6 +63,8 @@ export default function AdminUsers() {
       last_name: lastName,
       phone,
       address,
+      transportation_fee:
+        editTransportationFee !== "" ? Number(editTransportationFee) : null,
     };
 
     console.log("[CLIENT] Creating user with data:", data);
@@ -138,6 +143,8 @@ export default function AdminUsers() {
         last_name: editLastName,
         phone: editPhone,
         address: editAddress,
+        transportation_fee:
+          editTransportationFee !== "" ? Number(editTransportationFee) : null,
       }),
     });
 
@@ -243,6 +250,7 @@ export default function AdminUsers() {
           setEditLastName("");
           setEditPhone("");
           setEditAddress("");
+          setEditTransportationFee("");
           setEditingUser({} as UserRow);
         }}
         className="w-full mb-6 py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
@@ -308,6 +316,7 @@ export default function AdminUsers() {
               <th className="text-left p-4 text-white font-semibold">Email</th>
               <th className="text-left p-4 text-white font-semibold">Phone</th>
               <th className="text-left p-4 text-white font-semibold">Address</th>
+              <th className="text-left p-4 text-white font-semibold">Fee (€)</th>
               <th className="text-center p-4 text-white font-semibold rounded-tr-lg">Actions</th>
             </tr>
           </thead>
@@ -350,6 +359,17 @@ export default function AdminUsers() {
                     </div>
                   </td>
                   <td className="p-4">
+                    <div className="text-white/80">
+                      {u.transportation_fee != null ? (
+                        <span className="inline-block px-2 py-1 rounded bg-blue-500/20 text-blue-300 text-xs font-semibold">
+                          {Number(u.transportation_fee).toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="text-white/40 italic text-xs">Global</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-4">
                     <div className="flex gap-1 justify-center flex-wrap">
                       <button
                         onClick={() => showQrForUser(u.id)}
@@ -373,6 +393,9 @@ export default function AdminUsers() {
                           setEditLastName(u.last_name || "");
                           setEditPhone(u.phone || "");
                           setEditAddress(u.address || "");
+                          setEditTransportationFee(
+                            u.transportation_fee != null ? String(u.transportation_fee) : ""
+                          );
                         }}
                         className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white rounded-md text-xs font-semibold transition"
                         title="Edit User"
@@ -477,6 +500,20 @@ export default function AdminUsers() {
               />
             </div>
 
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Transportation Fee (€)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Leave empty to use global fee"
+                value={editTransportationFee}
+                onChange={(e) => setEditTransportationFee(e.target.value)}
+                className="w-full p-3 bg-slate-800 border border-white/10 rounded-lg text-white placeholder:text-white/40"
+              />
+              <p className="text-xs text-white/40 mt-1">Empty = use global site fee</p>
+            </div>
+
             <div className="flex gap-2">
               {editingUser.id ? (
                 <button
@@ -494,6 +531,7 @@ export default function AdminUsers() {
                       editLastName,
                       editPhone,
                       editAddress,
+                      editTransportationFee,
                     });
                     await createUser({
                       email: editEmail,
@@ -501,6 +539,8 @@ export default function AdminUsers() {
                       last_name: editLastName,
                       phone: editPhone,
                       address: editAddress,
+                      transportation_fee:
+                        editTransportationFee !== "" ? Number(editTransportationFee) : null,
                     });
                     setEditingUser(null);
                   }}

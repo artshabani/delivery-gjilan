@@ -1,20 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ShoppingBag, Utensils, Shield, Clock, UserPlus } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { useAdminGuard } from "@/app/hooks/useAdminGuard"
+import { useAdminGuard } from "@/app/hooks/useAdminGuard";
+import { TokenHandler } from "./components/TokenHandler";
 
 export default function Home() {
   const [name, setName] = useState<string | null>(null);
   const { loading, allowed } = useAdminGuard();
-  const search = useSearchParams();
-  const router = useRouter();
-
-  // No redirect; allow home to render even when token is present
 
   // Fetch logged-in user's name
   useEffect(() => {
@@ -41,6 +37,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 pb-16">
+
+      {/* Handle token from URL params */}
+      <Suspense>
+        <TokenHandler />
+      </Suspense>
 
       {/* TITLE */}
       <motion.h1

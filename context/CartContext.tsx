@@ -39,12 +39,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       try {
         const userId = localStorage.getItem("dg_user_id");
 
+        // 1) Try localStorage cache first to avoid extra fetches
+        try {
+          const cachedRaw = localStorage.getItem("dg_transportation_fee");
+          if (cachedRaw) {
+            const cached = JSON.parse(cachedRaw) as { userId?: string; fee?: number };
+            if (cached && cached.userId === userId && cached.fee != null) {
+              setTransportationFee(Number(cached.fee));
+              // Still continue to fetch once in background to ensure freshness
+            }
+          }
+        } catch {}
+
         if (userId) {
           const userRes = await fetch(`/api/pricing/transportation-fee?userId=${encodeURIComponent(userId)}`);
           if (userRes.ok) {
             const userData = await userRes.json();
             if (userData && userData.transportation_fee != null) {
               setTransportationFee(Number(userData.transportation_fee || 0));
+              // Persist in localStorage for future fast loads
+              try {
+                localStorage.setItem("dg_transportation_fee", JSON.stringify({ userId, fee: Number(userData.transportation_fee || 0) }));
+              } catch {}
               return;
             }
           }
@@ -54,6 +70,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         if (res.ok) {
           const data = await res.json();
           setTransportationFee(Number(data.transportation_fee || 0));
+          try {
+            localStorage.setItem("dg_transportation_fee", JSON.stringify({ userId: null, fee: Number(data.transportation_fee || 0) }));
+          } catch {}
         }
       } catch (error) {
         console.error("Failed to fetch transportation fee:", error);
@@ -75,13 +94,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const onUserIdSet = () => fetchTransportationFee();
     window.addEventListener("dg_user_id-set", onUserIdSet as EventListener);
 
-    // Periodic refresh to avoid stale values
-    const interval = setInterval(fetchTransportationFee, 60_000);
-
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("dg_user_id-set", onUserIdSet as EventListener);
-      clearInterval(interval);
     };
   }, []);
 

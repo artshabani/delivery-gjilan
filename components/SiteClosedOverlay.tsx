@@ -25,12 +25,10 @@ export default function SiteClosedOverlay() {
       }
     };
 
-    // check immediately on navigation
+    // Check immediately on navigation (avoid polling)
     fetchStatus();
-    const poll = setInterval(fetchStatus, 30000);
     return () => {
       active = false;
-      clearInterval(poll);
     };
   }, [pathname]);
 

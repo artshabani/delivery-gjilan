@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 import { useCart } from "@/context/CartContext";
 
 export default function CartOverlay() {
-  const MIN_ORDER_TOTAL = 4;
+  const MIN_ORDER_TOTAL = 2;
 
   const {
     items: cartItems,
